@@ -1,0 +1,4399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartQuantify - PDF Quantity Takeoff System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    
+    <style>
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: none;
+        }
+
+        .container.active {
+            display: block;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 24px;
+            color: #1e3a8a;
+        }
+
+        .logo-text h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .logo-text p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1e3a8a;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Toolbar Styles */
+        .toolbar {
+            background: #f8fafc;
+            padding: 15px 30px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .toolbar-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .file-upload {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-label {
+            background: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .file-label:hover {
+            background: #1d4ed8;
+        }
+
+        .tool-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            padding: 10px 20px;
+            border: 2px solid #cbd5e1;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tool-btn:hover {
+            border-color: #2563eb;
+        }
+
+        .tool-btn.active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        /* Quality Controls */
+        .quality-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+
+        .quality-slider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quality-slider label {
+            font-size: 14px;
+            color: #1e293b;
+            font-weight: 600;
+            min-width: 60px;
+        }
+
+        .quality-slider input {
+            width: 150px;
+        }
+
+        .quality-slider span {
+            min-width: 50px;
+            font-size: 14px;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            height: 600px;
+        }
+
+        .pdf-viewer {
+            background: #f1f5f9;
+            border-radius: 12px;
+            overflow: auto;
+            position: relative;
+            image-rendering: crisp-edges;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+
+        #pdfCanvas, #drawingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            image-rendering: crisp-edges;
+            -ms-interpolation-mode: nearest-neighbor;
+        }
+
+        /* Scroll controls */
+        .scroll-controls {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 100;
+        }
+
+        .scroll-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(37, 99, 235, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .scroll-btn:hover {
+            background: #1d4ed8;
+            transform: scale(1.1);
+        }
+
+        .zoom-controls {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 100;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            color: #2563eb;
+            border: 1px solid #cbd5e1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .zoom-btn:hover {
+            background: #f1f5f9;
+        }
+
+        /* Measurements Panel */
+        .measurements-panel {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .panel-header h3 {
+            color: #1e293b;
+        }
+
+        .panel-header-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .measurement-item {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #2563eb;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .measurement-item:hover {
+            background: #f1f5f9;
+        }
+
+        .measurement-item.selected {
+            border-left-color: #f59e0b;
+            background: #fef3c7;
+        }
+
+        .measurement-item h4 {
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+
+        .measurement-item p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* Login/Signup Container */
+        .auth-container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: none;
+        }
+
+        .auth-container.active {
+            display: flex;
+        }
+
+        .auth-left {
+            flex: 1;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            padding: 50px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .auth-left h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .auth-left p {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .features {
+            list-style: none;
+        }
+
+        .features li {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .auth-right {
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .auth-tab {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .password-input {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        .auth-error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .auth-success {
+            background: #dcfce7;
+            color: #16a34a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        /* Snap Points */
+        .snap-point {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #ff5722;
+            border: 2px solid white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+            box-shadow: 0 0 0 2px rgba(255, 87, 34, 0.5);
+        }
+
+        /* Count Markers */
+        .count-marker {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            z-index: 5;
+            cursor: grab;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        
+        .count-marker:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+        
+        .count-marker.dragging {
+            opacity: 0.8;
+            transform: scale(1.1);
+            cursor: grabbing;
+            box-shadow: 0 0 0 3px #f59e0b, 0 4px 12px rgba(0,0,0,0.4);
+            z-index: 100;
+        }
+        
+        .category-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: white;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            pointer-events: none;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            padding: 10px 30px;
+            background: #f1f5f9;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        /* Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+            vertical-align: middle;
+            margin: 0 10px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+
+        input:checked + .slider {
+            background-color: #10b981;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .slider.round {
+            border-radius: 24px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
+        }
+
+        /* Snap info display */
+        .snap-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(37, 99, 235, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 100;
+            display: none;
+            pointer-events: none;
+        }
+
+        /* Grid lines */
+        .grid-line {
+            position: absolute;
+            background: rgba(37, 99, 235, 0.1);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Measurement info overlay */
+        .measurement-info {
+            position: absolute;
+            background: rgba(37, 99, 235, 0.95);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            pointer-events: none;
+            z-index: 50;
+            transform: translate(-50%, -100%);
+            margin-top: -10px;
+            white-space: nowrap;
+        }
+
+        /* Category item in modal */
+        .category-item {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: background 0.2s;
+        }
+        
+        .category-item:hover {
+            background: #f8fafc;
+        }
+        
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .category-stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px dashed #cbd5e1;
+        }
+
+        /* Summary Table Styles */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .summary-table th {
+            background: #f8fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .summary-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+        }
+
+        .summary-table tr:hover {
+            background: #f1f5f9;
+        }
+
+        .summary-table .category-color {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .summary-stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .summary-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        /* Hint text */
+        .hint-text {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* Google Drive specific styles */
+        .drive-button {
+            background: #34A853 !important;
+            color: white !important;
+            border-color: #34A853 !important;
+        }
+        
+        .drive-button:hover {
+            background: #2d9249 !important;
+        }
+        
+        .drive-file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+        
+        .drive-file-item:hover {
+            background: #f8fafc;
+        }
+        
+        .drive-file-info {
+            flex: 1;
+        }
+        
+        .drive-file-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .drive-file-meta {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+        
+        .drive-file-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .drive-action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .drive-load-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .drive-load-btn:hover {
+            background: #2563eb;
+        }
+        
+        .drive-delete-btn {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .drive-delete-btn:hover {
+            background: #dc2626;
+        }
+        
+        .folder-badge {
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #475569;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .auth-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Container -->
+    <div id="authContainer" class="auth-container active">
+        <div class="auth-left">
+            <div class="logo">
+                <div class="logo-icon">SQ</div>
+                <div class="logo-text">
+                    <h1>SmartQuantify</h1>
+                    <p>Professional PDF Quantity Takeoff</p>
+                </div>
+            </div>
+            
+            <h2>Measure Smarter,<br>Work Faster</h2>
+            <p>Extract quantities from PDF drawings with precision and ease. Perfect for quantity surveyors, engineers, and contractors.</p>
+            
+            <ul class="features">
+                <li>
+                    <div class="feature-icon">📏</div>
+                    <span>Accurate length, area, and count measurements</span>
+                </li>
+                <li>
+                    <div class="feature-icon">🎯</div>
+                    <span>Smart snap-to-point precision</span>
+                </li>
+                <li>
+                    <div class="feature-icon">💾</div>
+                    <span>Save, load, and export projects</span>
+                </li>
+                <li>
+                    <div class="feature-icon">📊</div>
+                    <span>Export to CSV and JSON formats</span>
+                </li>
+                <li>
+                    <div class="feature-icon">🔄</div>
+                    <span>Move and auto-correct count numbers</span>
+                </li>
+                <li>
+                    <div class="feature-icon">☁️</div>
+                    <span>Google Drive integration (no API keys required)</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="auth-right">
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="showAuthForm('login')">Sign In</div>
+                <div class="auth-tab" onclick="showAuthForm('signup')">Sign Up</div>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active">
+                <div id="loginError" class="auth-error"></div>
+                <div id="loginSuccess" class="auth-success"></div>
+                
+                <div class="form-group">
+                    <label for="loginEmail">Email Address</label>
+                    <input type="email" id="loginEmail" placeholder="you@company.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <div class="password-input">
+                        <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                        <button type="button" class="toggle-password" onclick="togglePassword('loginPassword')">Show</button>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+                    <label style="margin: 0;">
+                        <input type="checkbox" id="rememberMe"> Remember me
+                    </label>
+                    <a href="#" onclick="showForgotPassword()" style="color: #2563eb; text-decoration: none;">Forgot password?</a>
+                </div>
+                
+                <button type="submit" class="submit-btn">Sign In to SmartQuantify</button>
+                
+                <div style="margin-top: 20px; text-align: center; color: #64748b;">
+                    <p>Demo account: demo@smartquantify.com / demo123</p>
+                </div>
+            </form>
+            
+            <!-- Signup Form -->
+            <form id="signupForm" class="auth-form">
+                <div id="signupError" class="auth-error"></div>
+                <div id="signupSuccess" class="auth-success"></div>
+                
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" placeholder="John Doe" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signupEmail">Work Email</label>
+                    <input type="email" id="signupEmail" placeholder="john@construction.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signupCompany">Company</label>
+                    <input type="text" id="signupCompany" placeholder="ABC Construction Ltd." required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signupRole">Your Role</label>
+                    <select id="signupRole" required>
+                        <option value="">Select your role</option>
+                        <option value="quantity_surveyor">Quantity Surveyor</option>
+                        <option value="site_engineer">Site Engineer</option>
+                        <option value="project_manager">Project Manager</option>
+                        <option value="contractor">Contractor</option>
+                        <option value="student">Student</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signupPassword">Create Password</label>
+                    <div class="password-input">
+                        <input type="password" id="signupPassword" placeholder="Minimum 8 characters" required>
+                        <button type="button" class="toggle-password" onclick="togglePassword('signupPassword')">Show</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <div class="password-input">
+                        <input type="password" id="confirmPassword" placeholder="Re-enter your password" required>
+                        <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword')">Show</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="agreeTerms" required>
+                        I agree to the <a href="#" style="color: #2563eb;">Terms of Service</a> and <a href="#" style="color: #2563eb;">Privacy Policy</a>
+                    </label>
+                </div>
+                
+                <button type="submit" class="submit-btn">Create Free Account</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Main App Container -->
+    <div id="appContainer" class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">SQ</div>
+                <div class="logo-text">
+                    <h1>SmartQuantify</h1>
+                    <p>PDF Quantity Takeoff System</p>
+                </div>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">JD</div>
+                <div>
+                    <div id="userName">John Doe</div>
+                    <div id="userCompany" style="font-size: 12px; opacity: 0.8;">ABC Construction</div>
+                </div>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-grid">
+                <div class="file-upload">
+                    <label class="file-label">
+                        📁 Upload PDF
+                        <input type="file" id="pdfInput" accept="application/pdf" style="display: none;">
+                    </label>
+                    <button id="prevBtn" class="tool-btn">◀ Prev</button>
+                    <button id="nextBtn" class="tool-btn">Next ▶</button>
+                    <span id="pageInfo">Page: - / -</span>
+                </div>
+                
+                <div class="tool-group">
+                    <button id="selectTool" class="tool-btn">✋ Select</button>
+                    <button id="linearTool" class="tool-btn active">📏 Linear</button>
+                    <button id="areaTool" class="tool-btn">🔲 Area</button>
+                    <button id="countTool" class="tool-btn">🔢 Count</button>
+                    <button id="calibrateBtn" class="tool-btn">🎯 Calibrate</button>
+                    <button id="finishAreaBtn" class="tool-btn" style="display: none;">✅ Finish Area</button>
+                    <button id="summaryToolBtn" class="tool-btn" style="background: #10b981; color: white;">📊 Summary</button>
+                    <button id="clearBtn" class="tool-btn" style="background: #ef4444; color: white;">🗑️ Clear All</button>
+                </div>
+            </div>
+            
+            <!-- Quality Controls -->
+            <div class="quality-controls">
+                <div class="quality-slider">
+                    <label>Quality:</label>
+                    <input type="range" id="qualitySlider" min="1" max="5" value="3" step="0.5">
+                    <span id="qualityValue">3.0x</span>
+                </div>
+                <div class="quality-slider">
+                    <label>Smoothing:</label>
+                    <input type="range" id="smoothingSlider" min="0" max="1" value="0.5" step="0.1">
+                    <span id="smoothingValue">0.5</span>
+                </div>
+                <div>
+                    <button id="refreshPdfBtn" class="tool-btn" style="padding: 5px 15px;">🔄 Refresh</button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <label style="font-size: 14px; color: #64748b;">Units: </label>
+                    <select id="unitSelector" style="padding: 5px; border-radius: 5px; border: 1px solid #cbd5e1;">
+                        <option value="m">Meters</option>
+                        <option value="mm">Millimeters</option>
+                        <option value="cm">Centimeters</option>
+                        <option value="in">Inches</option>
+                        <option value="ft">Feet</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="font-size: 14px; color: #64748b;">Snap: </label>
+                    <label class="switch">
+                        <input type="checkbox" id="snapToggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                    <select id="snapMode" style="padding: 5px; border-radius: 5px; border: 1px solid #cbd5e1;">
+                        <option value="endpoints">Endpoints</option>
+                        <option value="midpoints">Midpoints</option>
+                        <option value="all">All Points</option>
+                        <option value="grid">Grid (10px)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="font-size: 14px; color: #64748b;">Snap Tolerance: </label>
+                    <input type="range" id="snapTolerance" min="1" max="30" value="10" style="vertical-align: middle;">
+                    <span id="toleranceValue">10px</span>
+                </div>
+                
+                <!-- Enhanced Count Category Controls -->
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <label style="font-size: 14px; color: #64748b;">Count Category: </label>
+                    <select id="countCategorySelector" style="padding: 5px; border-radius: 5px; border: 1px solid #cbd5e1; min-width: 150px;">
+                        <!-- Categories will be populated here -->
+                    </select>
+                    <button id="manageCategoriesBtn" class="tool-btn" style="padding: 5px 10px;" onclick="showCategoryManager()">⚙️ Manage</button>
+                    <input type="color" id="countColor" value="#e74c3c" style="vertical-align: middle; width: 40px; height: 30px;">
+                </div>
+            </div>
+            
+            <!-- Hint for moving count items -->
+            <div style="margin-top: 10px; font-size: 12px; color: #2563eb; background: #e6f0ff; padding: 5px 10px; border-radius: 5px;">
+                💡 <strong>Tip:</strong> Click and drag any count marker to move it. Numbers auto-correct when deleted.
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="pdf-viewer" id="pdfViewer">
+                <div class="canvas-container" id="canvasContainer">
+                    <!-- PDF and drawing canvases will be inserted here -->
+                </div>
+                <!-- Scroll controls -->
+                <div class="scroll-controls">
+                    <button class="scroll-btn" onclick="scrollViewer('up')">↑</button>
+                    <button class="scroll-btn" onclick="scrollViewer('left')">←</button>
+                    <button class="scroll-btn" onclick="scrollViewer('right')">→</button>
+                    <button class="scroll-btn" onclick="scrollViewer('down')">↓</button>
+                    <button class="scroll-btn" onclick="centerView()" style="background: #10b981;">⊙</button>
+                </div>
+                <!-- Zoom controls -->
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomOut()">-</button>
+                    <button class="zoom-btn" onclick="resetZoom()">100%</button>
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                </div>
+                <!-- Snap info -->
+                <div class="snap-info" id="snapInfo"></div>
+            </div>
+            
+            <div class="measurements-panel">
+                <div class="panel-header">
+                    <h3>Measurements</h3>
+                    <div class="panel-header-buttons">
+                        <button id="saveBtn" class="tool-btn" style="padding: 5px 10px;">💾 Save</button>
+                        <button id="loadBtn" class="tool-btn" style="padding: 5px 10px;">📂 Load</button>
+                        <button id="googleDriveBtn" class="tool-btn drive-button" style="padding: 5px 10px;">☁️ Drive</button>
+                    </div>
+                </div>
+                
+                <!-- Quick Summary Panel -->
+                <div id="quickSummary" style="background: #f8fafc; border-radius: 8px; padding: 15px; margin-bottom: 20px; border: 1px solid #e2e8f0;"></div>
+                
+                <div id="measurementsList">
+                    <div class="measurement-item">
+                        <h4>No measurements yet</h4>
+                        <p>Start measuring by uploading a PDF and using the tools</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button id="exportJsonBtn" class="tool-btn" style="width: 100%; margin-bottom: 10px;">📄 Export JSON</button>
+                    <button id="exportCsvBtn" class="tool-btn" style="width: 100%;">📊 Export CSV</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span>Tool:</span>
+                <strong id="currentToolDisplay">Linear</strong>
+            </div>
+            <div class="status-item">
+                <span>Scale:</span>
+                <strong id="scaleDisplay">Not set</strong>
+            </div>
+            <div class="status-item">
+                <span>Measurements:</span>
+                <strong id="totalMeasurements">0</strong>
+            </div>
+            <div class="status-item">
+                <span>Snap:</span>
+                <strong id="snapStatus" style="color: #10b981;">ON</strong>
+            </div>
+            <div class="status-item">
+                <span>Zoom:</span>
+                <strong id="zoomDisplay">100%</strong>
+            </div>
+            <div class="status-item">
+                <span>Quality:</span>
+                <strong id="qualityDisplay">3.0x</strong>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 20px;">Reset Password</h3>
+            <p style="margin-bottom: 20px; color: #64748b;">Enter your email address and we'll send you instructions to reset your password.</p>
+            
+            <div class="form-group">
+                <label for="resetEmail">Email Address</label>
+                <input type="email" id="resetEmail" placeholder="you@company.com">
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="closeModal()" style="flex: 1; padding: 12px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button onclick="resetPassword()" style="flex: 1; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer;">Send Reset Link</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Load Project Modal -->
+    <div id="loadProjectModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 20px;">Load Project</h3>
+            <div id="projectList" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+                <!-- Projects will be loaded here -->
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeModal()" style="flex: 1; padding: 12px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calibration Modal -->
+    <div id="calibrationModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 20px;">Calibrate Scale</h3>
+            <p style="margin-bottom: 20px; color: #64748b;">
+                To set the scale, draw a line between two points with a known distance on your PDF, 
+                then enter the real-world length.
+            </p>
+            
+            <div class="form-group">
+                <label for="calibrationLength">Real-world Length</label>
+                <input type="number" id="calibrationLength" step="0.001" placeholder="Enter length" min="0.001">
+            </div>
+            
+            <div class="form-group">
+                <label for="calibrationUnit">Unit</label>
+                <select id="calibrationUnit">
+                    <option value="m">Meters</option>
+                    <option value="mm">Millimeters</option>
+                    <option value="cm">Centimeters</option>
+                    <option value="in">Inches</option>
+                    <option value="ft">Feet</option>
+                </select>
+            </div>
+            
+            <div id="calibrationPixelInfo" style="padding: 10px; background: #f1f5f9; border-radius: 8px; margin-bottom: 20px;">
+                <strong>Pixel Distance:</strong> <span id="pixelDistance">0</span> px
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="cancelCalibration()" style="flex: 1; padding: 12px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button onclick="applyCalibration()" style="flex: 1; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer;">Apply Calibration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Count Category Modal -->
+    <div id="countCategoryModal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 20px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                Manage Count Categories
+                <button id="summaryBtnInModal" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;">📊 View Summary</button>
+                <button id="renumberAllBtn" style="background: #f59e0b; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;">🔄 Renumber All</button>
+            </h3>
+            
+            <div style="margin-bottom: 20px;">
+                <button onclick="showAddCategoryForm()" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-right: 10px;">➕ Add Category</button>
+                <button onclick="closeCategoryModal()" style="background: #64748b; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Close</button>
+            </div>
+            
+            <!-- Add Category Form (hidden by default) -->
+            <div id="addCategoryForm" style="display: none; margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                <h4 style="margin-bottom: 10px;">New Category</h4>
+                <div class="form-group">
+                    <label>Category Name</label>
+                    <input type="text" id="newCategoryName" placeholder="e.g., Doors, Windows, Furniture">
+                </div>
+                <div class="form-group">
+                    <label>Category Color</label>
+                    <input type="color" id="newCategoryColor" value="#3498db">
+                </div>
+                <button onclick="addCountCategory()" style="background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Create Category</button>
+                <button onclick="hideAddCategoryForm()" style="background: #e2e8f0; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-left: 10px;">Cancel</button>
+            </div>
+            
+            <!-- Categories List -->
+            <div id="categoriesList" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+                <!-- Categories will be populated here -->
+            </div>
+            
+            <!-- Category Stats -->
+            <div id="categoryStats" class="category-stats">
+                <h4 style="margin-bottom: 10px;">Category Statistics</h4>
+                <div id="statsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Drive Modal -->
+    <div id="googleDriveModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="color: #1e293b; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 28px;">☁️</span>
+                    Google Drive Integration
+                </h3>
+                <button onclick="closeGoogleDriveModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+            </div>
+            
+            <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <div style="flex: 1;">
+                        <h4 style="margin-bottom: 5px;">Your Google Drive Folder</h4>
+                        <div class="folder-badge">
+                            <span>📁</span>
+                            <span>SmartQuantify Projects</span>
+                        </div>
+                        <p style="font-size: 12px; color: #64748b; margin-top: 8px;">
+                            Files are saved to your SmartQuantify folder. You can also use any public Google Drive link.
+                        </p>
+                    </div>
+                    <a href="https://drive.google.com/drive/folders/1kf8--zHwud3CbqAEkMMFBlfN_jbhZ0T1" target="_blank" style="background: #4285F4; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; gap: 8px;">
+                        <span>📂</span> Open Folder
+                    </a>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <button onclick="saveToDriveDirect()" style="background: #34A853; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                    <span style="font-size: 24px;">💾</span>
+                    Save to Drive
+                    <span style="font-size: 11px; opacity: 0.9;">(download .json file)</span>
+                </button>
+                <button onclick="loadFromDriveDirect()" style="background: #4285F4; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                    <span style="font-size: 24px;">📂</span>
+                    Load from Drive
+                    <span style="font-size: 11px; opacity: 0.9;">(enter file link)</span>
+                </button>
+            </div>
+            
+            <!-- Direct Link Input (shown when loading) -->
+            <div id="driveLinkInput" style="display: none; margin-bottom: 20px; padding: 15px; background: #f1f5f9; border-radius: 8px;">
+                <h4 style="margin-bottom: 10px;">Enter Google Drive Link</h4>
+                <input type="text" id="driveFileLink" placeholder="Paste Google Drive share link or file ID" style="width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 6px; margin-bottom: 10px;">
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="processDriveLink()" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Load File</button>
+                    <button onclick="cancelDriveLoad()" style="flex: 1; background: #64748b; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">Cancel</button>
+                </div>
+                <p style="font-size: 11px; color: #64748b; margin-top: 10px;">
+                    Example: https://drive.google.com/file/d/FILE_ID/view or just FILE_ID
+                </p>
+            </div>
+            
+            <!-- Quick Save/Load from our folder -->
+            <div id="driveFolderFiles" style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                <h4 style="margin-bottom: 15px;">Files in your SmartQuantify Folder</h4>
+                <div id="folderFilesList" style="max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                    <p style="color: #64748b; text-align: center; padding: 20px;">
+                        Click "Load from Drive" and paste a file link to load projects.<br>
+                        <small>Note: For direct folder access, files need to be publicly shared or you need to use the Google Drive API.</small>
+                    </p>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 10px; background: #fef9c3; border-radius: 6px; font-size: 12px; color: #854d0e; display: flex; gap: 10px; align-items: center;">
+                <span style="font-size: 16px;">💡</span>
+                <span>
+                    <strong>Simple method:</strong> Save to download a .json file, then upload it to your Google Drive folder manually. 
+                    To load, share the file and paste the link here.
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== GLOBAL STATE ====================
+        let currentUser = null;
+        let pdfDoc = null;
+        let currentPage = 1;
+        let baseScale = 1.5;
+        let qualityMultiplier = 3.0;
+        let imageSmoothing = 0.5;
+        let currentZoom = 1.0;
+        let currentTool = 'linear';
+        let measurements = [];
+        let pixelToUnit = null;
+        let selectedUnit = 'm';
+        let snapEnabled = true;
+        let snapMode = 'endpoints';
+        let snapTolerance = 10;
+        let isDrawing = false;
+        let tempPoints = [];
+        let selectedMeasurements = [];
+        let currentSnapPoint = null;
+        let isCalibrating = false;
+        let calibrationPoints = [];
+        let gridSize = 10;
+        let isDraggingLine = false;
+        let dragLineIndex = -1;
+        
+        // New state for count item dragging
+        let isDraggingCount = false;
+        let draggedCountIndex = -1;
+        let dragOffset = { x: 0, y: 0 };
+        let dragStartPos = { x: 0, y: 0 };
+        let isDragActive = false;
+        
+        // Enhanced Count Categories
+        let countCategories = {
+            'doors': {
+                name: 'Doors',
+                color: '#e74c3c',
+                counter: 1,
+                items: []
+            },
+            'windows': {
+                name: 'Windows',
+                color: '#3498db',
+                counter: 1,
+                items: []
+            },
+            'furniture': {
+                name: 'Furniture',
+                color: '#2ecc71',
+                counter: 1,
+                items: []
+            },
+            'fixtures': {
+                name: 'Fixtures',
+                color: '#f39c12',
+                counter: 1,
+                items: []
+            }
+        };
+        let activeCountCategory = 'doors';
+        
+        // Google Drive folder ID
+        const GOOGLE_DRIVE_FOLDER_ID = '1kf8--zHwud3CbqAEkMMFBlfN_jbhZ0T1';
+        const GOOGLE_DRIVE_FOLDER_URL = 'https://drive.google.com/drive/folders/1kf8--zHwud3CbqAEkMMFBlfN_jbhZ0T1';
+        
+        // Unit conversion factors (to meters)
+        const unitConversions = {
+            'm': 1,
+            'mm': 0.001,
+            'cm': 0.01,
+            'in': 0.0254,
+            'ft': 0.3048
+        };
+
+        // ==================== AUTHENTICATION ====================
+        
+        function initAuth() {
+            if (!localStorage.getItem('smartquantify_users')) {
+                const demoUser = {
+                    id: 1,
+                    fullName: 'Demo User',
+                    email: 'demo@smartquantify.com',
+                    company: 'SmartQuantify Demo',
+                    role: 'demo',
+                    password: 'demo123',
+                    createdAt: new Date().toISOString()
+                };
+                localStorage.setItem('smartquantify_users', JSON.stringify([demoUser]));
+            }
+            
+            const savedUser = localStorage.getItem('smartquantify_currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showApp();
+            }
+        }
+        
+        function showAuthForm(form) {
+            document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
+            
+            if (form === 'login') {
+                document.querySelector('.auth-tab:nth-child(1)').classList.add('active');
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.querySelector('.auth-tab:nth-child(2)').classList.add('active');
+                document.getElementById('signupForm').classList.add('active');
+            }
+        }
+        
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const button = input.parentElement.querySelector('.toggle-password');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = 'Hide';
+            } else {
+                input.type = 'password';
+                button.textContent = 'Show';
+            }
+        }
+        
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            const successDiv = document.getElementById('loginSuccess');
+            
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            if (!email || !password) {
+                showError(errorDiv, 'Please fill in all fields');
+                return;
+            }
+            
+            const users = JSON.parse(localStorage.getItem('smartquantify_users') || '[]');
+            const user = users.find(u => u.email === email && u.password === password);
+            
+            if (user) {
+                currentUser = {
+                    id: user.id,
+                    email: user.email,
+                    name: user.fullName,
+                    company: user.company,
+                    role: user.role,
+                    loggedIn: true
+                };
+                
+                localStorage.setItem('smartquantify_currentUser', JSON.stringify(currentUser));
+                showSuccess(successDiv, 'Login successful! Redirecting...');
+                
+                setTimeout(() => {
+                    showApp();
+                }, 500);
+            } else {
+                showError(errorDiv, 'Invalid email or password. Try: demo@smartquantify.com / demo123');
+            }
+        });
+        
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const company = document.getElementById('signupCompany').value.trim();
+            const role = document.getElementById('signupRole').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const agreeTerms = document.getElementById('agreeTerms').checked;
+            
+            const errorDiv = document.getElementById('signupError');
+            const successDiv = document.getElementById('signupSuccess');
+            
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            if (!name || !email || !company || !role || !password || !confirmPassword) {
+                showError(errorDiv, 'Please fill in all fields');
+                return;
+            }
+            
+            if (!agreeTerms) {
+                showError(errorDiv, 'You must agree to the terms and conditions');
+                return;
+            }
+            
+            if (password.length < 8) {
+                showError(errorDiv, 'Password must be at least 8 characters long');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showError(errorDiv, 'Passwords do not match');
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                showError(errorDiv, 'Please enter a valid email address');
+                return;
+            }
+            
+            const users = JSON.parse(localStorage.getItem('smartquantify_users') || '[]');
+            
+            if (users.some(u => u.email === email)) {
+                showError(errorDiv, 'An account with this email already exists');
+                return;
+            }
+            
+            const newUser = {
+                id: Date.now(),
+                fullName: name,
+                email: email,
+                company: company,
+                role: role,
+                password: password,
+                createdAt: new Date().toISOString()
+            };
+            
+            users.push(newUser);
+            localStorage.setItem('smartquantify_users', JSON.stringify(users));
+            
+            currentUser = {
+                id: newUser.id,
+                email: newUser.email,
+                name: newUser.fullName,
+                company: newUser.company,
+                role: newUser.role,
+                loggedIn: true
+            };
+            
+            localStorage.setItem('smartquantify_currentUser', JSON.stringify(currentUser));
+            showSuccess(successDiv, 'Account created successfully! Redirecting...');
+            
+            setTimeout(() => {
+                showApp();
+            }, 500);
+        });
+        
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('smartquantify_currentUser');
+                currentUser = null;
+                showAuth();
+            }
+        }
+        
+        function showForgotPassword() {
+            document.getElementById('forgotPasswordModal').classList.add('active');
+        }
+        
+        function resetPassword() {
+            const email = document.getElementById('resetEmail').value;
+            
+            if (!validateEmail(email)) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            alert(`Password reset instructions have been sent to ${email} (simulated)`);
+            closeModal();
+        }
+        
+        function closeModal() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+        
+        function showError(element, message) {
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+        
+        function showSuccess(element, message) {
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+        
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+        
+        function showApp() {
+            document.getElementById('authContainer').classList.remove('active');
+            document.getElementById('appContainer').classList.add('active');
+            
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser.name;
+                document.getElementById('userCompany').textContent = currentUser.company;
+                const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                document.getElementById('userAvatar').textContent = initials;
+            }
+            
+            initPDFViewer();
+            initSummaryFeatures();
+        }
+        
+        function showAuth() {
+            document.getElementById('appContainer').classList.remove('active');
+            document.getElementById('authContainer').classList.add('active');
+            document.getElementById('loginForm').reset();
+            document.getElementById('signupForm').reset();
+            showAuthForm('login');
+        }
+        
+        // ==================== GOOGLE DRIVE FUNCTIONS (NO API KEYS) ====================
+        
+        // Open Google Drive modal
+        function openGoogleDriveModal() {
+            document.getElementById('googleDriveModal').classList.add('active');
+            document.getElementById('driveLinkInput').style.display = 'none';
+        }
+        
+        // Close Google Drive modal
+        function closeGoogleDriveModal() {
+            document.getElementById('googleDriveModal').classList.remove('active');
+            document.getElementById('driveLinkInput').style.display = 'none';
+            document.getElementById('driveFileLink').value = '';
+        }
+        
+        // Save to Drive - download JSON file
+        function saveToDriveDirect() {
+            if (measurements.length === 0) {
+                alert('No measurements to save');
+                return;
+            }
+            
+            const projectName = prompt('Enter project name:', `SmartQuantify_${new Date().toISOString().split('T')[0]}`);
+            if (!projectName) return;
+            
+            // Prepare project data
+            const projectData = {
+                projectName: projectName,
+                exportDate: new Date().toISOString(),
+                user: currentUser ? currentUser.name : 'Anonymous',
+                scale: pixelToUnit ? `1px = ${(pixelToUnit / unitConversions[selectedUnit]).toFixed(6)} ${selectedUnit}` : 'Not calibrated',
+                units: selectedUnit,
+                quality: `${qualityMultiplier}x`,
+                categories: countCategories,
+                measurements: measurements,
+                summary: {
+                    total: measurements.length,
+                    byType: measurements.reduce((acc, m) => {
+                        acc[m.type] = (acc[m.type] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    byCategory: Object.keys(countCategories).reduce((acc, key) => {
+                        acc[key] = {
+                            name: countCategories[key].name,
+                            count: countCategories[key].items?.length || 0
+                        };
+                        return acc;
+                    }, {})
+                }
+            };
+            
+            // Create JSON file and download
+            const dataStr = JSON.stringify(projectData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${projectName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification(`Project saved as JSON file. Upload it to your Google Drive folder: ${GOOGLE_DRIVE_FOLDER_URL}`);
+            
+            // Open Google Drive folder in new tab
+            if (confirm('Open Google Drive folder to upload?')) {
+                window.open(GOOGLE_DRIVE_FOLDER_URL, '_blank');
+            }
+        }
+        
+        // Show load from Drive input
+        function loadFromDriveDirect() {
+            document.getElementById('driveLinkInput').style.display = 'block';
+            document.getElementById('driveFileLink').value = '';
+            document.getElementById('driveFileLink').focus();
+        }
+        
+        // Cancel drive load
+        function cancelDriveLoad() {
+            document.getElementById('driveLinkInput').style.display = 'none';
+            document.getElementById('driveFileLink').value = '';
+        }
+        
+        // Process Google Drive link and load file
+        function processDriveLink() {
+            let link = document.getElementById('driveFileLink').value.trim();
+            if (!link) {
+                alert('Please enter a Google Drive link or file ID');
+                return;
+            }
+            
+            // Extract file ID from various Google Drive URL formats
+            let fileId = extractGoogleDriveFileId(link);
+            
+            if (!fileId) {
+                alert('Could not extract file ID from the link. Please make sure it\'s a valid Google Drive share link.');
+                return;
+            }
+            
+            // Create direct download link
+            const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+            
+            // Fetch the file
+            fetch(downloadUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to download file');
+                    }
+                    return response.json();
+                })
+                .then(projectData => {
+                    // Load the project data
+                    loadProjectFromData(projectData);
+                    closeGoogleDriveModal();
+                    showNotification('Project loaded from Google Drive successfully!');
+                })
+                .catch(error => {
+                    console.error('Error loading from Drive:', error);
+                    
+                    // Alternative method - try to open in new tab for manual download
+                    if (confirm('Direct download failed. The file might not be publicly shared. Would you like to open it in a new tab to download manually?')) {
+                        window.open(`https://drive.google.com/file/d/${fileId}/view`, '_blank');
+                    }
+                });
+        }
+        
+        // Extract Google Drive file ID from various URL formats
+        function extractGoogleDriveFileId(url) {
+            // If it's already just an ID (alphanumeric string)
+            if (/^[a-zA-Z0-9_-]{25,}$/.test(url)) {
+                return url;
+            }
+            
+            // Match patterns:
+            // https://drive.google.com/file/d/FILE_ID/view
+            // https://drive.google.com/open?id=FILE_ID
+            // https://drive.google.com/uc?id=FILE_ID
+            const patterns = [
+                /[-\w]{25,}/,
+                /[?&]id=([^&]+)/,
+                /\/d\/([^\/]+)/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) {
+                    return match[1] || match[0];
+                }
+            }
+            
+            return null;
+        }
+        
+        // Load project from data object
+        function loadProjectFromData(projectData) {
+            // Restore measurements
+            if (projectData.measurements) {
+                measurements = projectData.measurements;
+            }
+            
+            // Restore categories
+            if (projectData.categories) {
+                countCategories = projectData.categories;
+                localStorage.setItem('smartquantify_countCategories', JSON.stringify(countCategories));
+            }
+            
+            // Restore units
+            if (projectData.units) {
+                selectedUnit = projectData.units;
+                document.getElementById('unitSelector').value = selectedUnit;
+            }
+            
+            // Restore scale if available
+            if (projectData.scale && projectData.scale !== 'Not calibrated') {
+                const scaleMatch = projectData.scale.match(/1px = ([\d.]+) (\w+)/);
+                if (scaleMatch) {
+                    const value = parseFloat(scaleMatch[1]);
+                    const unit = scaleMatch[2];
+                    if (value && unit) {
+                        pixelToUnit = value * unitConversions[unit];
+                    }
+                }
+            }
+            
+            // Update UI
+            updateCategorySelector();
+            updateScaleDisplay();
+            
+            if (pdfDoc) {
+                renderPage(currentPage);
+            }
+            
+            redrawAll();
+            updateMeasurementsList();
+            updateQuickSummary();
+        }
+        
+        // ==================== COUNT CATEGORY FUNCTIONS ====================
+        
+        function initCountCategories() {
+            const savedCategories = localStorage.getItem('smartquantify_countCategories');
+            if (savedCategories) {
+                try {
+                    countCategories = JSON.parse(savedCategories);
+                } catch (e) {
+                    console.error('Error loading categories:', e);
+                }
+            }
+            
+            Object.keys(countCategories).forEach(key => {
+                if (!countCategories[key].items) {
+                    countCategories[key].items = [];
+                }
+                if (!countCategories[key].counter) {
+                    countCategories[key].counter = 1;
+                }
+            });
+            
+            updateCategorySelector();
+        }
+        
+        function updateCategorySelector() {
+            const selector = document.getElementById('countCategorySelector');
+            if (!selector) return;
+            
+            selector.innerHTML = '';
+            Object.entries(countCategories).forEach(([id, category]) => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = `${category.name} (${category.counter-1} items)`;
+                option.style.backgroundColor = category.color + '20';
+                option.style.color = '#000';
+                selector.appendChild(option);
+            });
+            
+            if (activeCountCategory && countCategories[activeCountCategory]) {
+                selector.value = activeCountCategory;
+            } else {
+                activeCountCategory = Object.keys(countCategories)[0];
+                selector.value = activeCountCategory;
+            }
+            
+            if (countCategories[activeCountCategory]) {
+                document.getElementById('countColor').value = countCategories[activeCountCategory].color;
+            }
+        }
+        
+        function showCategoryManager() {
+            updateCategoriesList();
+            document.getElementById('countCategoryModal').classList.add('active');
+        }
+        
+        function updateCategoriesList() {
+            const list = document.getElementById('categoriesList');
+            const statsContent = document.getElementById('statsContent');
+            
+            list.innerHTML = Object.entries(countCategories).map(([id, category]) => {
+                const itemCount = category.items?.length || 0;
+                return `
+                    <div class="category-item">
+                        <div class="color-preview" style="background: ${category.color};"></div>
+                        <div style="flex: 1;">
+                            <strong>${category.name}</strong>
+                            <div style="font-size: 12px; color: #64748b;">${itemCount} items · Next count: #${category.counter}</div>
+                        </div>
+                        <div>
+                            <button onclick="editCategory('${id}')" style="background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px;">✏️ Edit</button>
+                            ${id !== 'doors' && id !== 'windows' && id !== 'furniture' && id !== 'fixtures' ? 
+                                `<button onclick="deleteCategory('${id}')" style="background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">🗑️ Delete</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            const totalItems = Object.values(countCategories).reduce((sum, cat) => sum + (cat.items?.length || 0), 0);
+            const categoryCounts = Object.entries(countCategories).map(([id, cat]) => {
+                return `
+                    <div class="stat-row">
+                        <span><span style="display: inline-block; width: 12px; height: 12px; background: ${cat.color}; border-radius: 3px; margin-right: 5px;"></span>${cat.name}:</span>
+                        <strong>${cat.items?.length || 0}</strong>
+                    </div>
+                `;
+            }).join('');
+            
+            statsContent.innerHTML = `
+                <div class="stat-row" style="font-weight: bold;">
+                    <span>Total Items:</span>
+                    <strong>${totalItems}</strong>
+                </div>
+                ${categoryCounts}
+            `;
+        }
+        
+        function showAddCategoryForm() {
+            document.getElementById('addCategoryForm').style.display = 'block';
+            document.getElementById('newCategoryName').value = '';
+            document.getElementById('newCategoryColor').value = '#3498db';
+        }
+        
+        function hideAddCategoryForm() {
+            document.getElementById('addCategoryForm').style.display = 'none';
+        }
+        
+        function addCountCategory() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            const color = document.getElementById('newCategoryColor').value;
+            
+            if (!name) {
+                alert('Please enter a category name');
+                return;
+            }
+            
+            const id = name.toLowerCase().replace(/\s+/g, '_');
+            
+            if (countCategories[id]) {
+                alert('A category with this name already exists');
+                return;
+            }
+            
+            countCategories[id] = {
+                name: name,
+                color: color,
+                counter: 1,
+                items: []
+            };
+            
+            localStorage.setItem('smartquantify_countCategories', JSON.stringify(countCategories));
+            
+            hideAddCategoryForm();
+            updateCategorySelector();
+            updateCategoriesList();
+            showNotification(`Category "${name}" created`);
+        }
+        
+        function editCategory(id) {
+            const category = countCategories[id];
+            const newName = prompt('Enter new category name:', category.name);
+            if (!newName) return;
+            
+            const newColor = prompt('Enter new color (hex):', category.color);
+            if (!newColor || !/^#[0-9A-F]{6}$/i.test(newColor)) {
+                alert('Please enter a valid hex color');
+                return;
+            }
+            
+            category.name = newName;
+            category.color = newColor;
+            
+            measurements.forEach(m => {
+                if (m.type === 'count' && m.categoryId === id) {
+                    m.color = newColor;
+                    m.name = newName;
+                }
+            });
+            
+            localStorage.setItem('smartquantify_countCategories', JSON.stringify(countCategories));
+            updateCategorySelector();
+            updateCategoriesList();
+            redrawAll();
+            showNotification('Category updated');
+        }
+        
+        function deleteCategory(id) {
+            if (id === 'doors' || id === 'windows' || id === 'furniture' || id === 'fixtures') {
+                alert('Cannot delete default category');
+                return;
+            }
+            
+            const category = countCategories[id];
+            if (category.items?.length > 0) {
+                if (!confirm(`Category "${category.name}" has ${category.items.length} items. Move them to another category?`)) {
+                    return;
+                }
+                
+                const targetId = Object.keys(countCategories).find(key => key !== id) || 'doors';
+                const targetCat = countCategories[targetId];
+                
+                category.items.forEach(item => {
+                    item.categoryId = targetId;
+                    item.color = targetCat.color;
+                    item.name = targetCat.name;
+                    targetCat.items.push(item);
+                });
+            }
+            
+            delete countCategories[id];
+            
+            measurements.forEach(m => {
+                if (m.type === 'count' && m.categoryId === id) {
+                    m.categoryId = 'doors';
+                    m.color = countCategories['doors'].color;
+                    m.name = countCategories['doors'].name;
+                }
+            });
+            
+            localStorage.setItem('smartquantify_countCategories', JSON.stringify(countCategories));
+            
+            if (activeCountCategory === id) {
+                activeCountCategory = 'doors';
+            }
+            
+            updateCategorySelector();
+            updateCategoriesList();
+            redrawAll();
+            showNotification('Category deleted');
+        }
+        
+        function closeCategoryModal() {
+            document.getElementById('countCategoryModal').classList.remove('active');
+        }
+
+        // ==================== MOVE AND AUTO-CORRECT COUNT FUNCTIONS ====================
+
+        // Enhanced handleMouseDown to support dragging count items
+        function handleMouseDown(e, canvas) {
+            if (isCalibrating) {
+                const pos = getCanvasPos(e, canvas);
+                calibrationPoints.push(pos);
+                
+                if (calibrationPoints.length === 1) {
+                    showNotification('Click on the second point for calibration');
+                } else if (calibrationPoints.length === 2) {
+                    showCalibrationModal();
+                }
+                return;
+            }
+            
+            const pos = getCanvasPos(e, canvas);
+            
+            // Always check for count item click first (regardless of tool)
+            const clickedCountIndex = findClickedCountItem(pos.x, pos.y);
+            if (clickedCountIndex !== -1) {
+                isDraggingCount = true;
+                draggedCountIndex = clickedCountIndex;
+                const measurement = measurements[clickedCountIndex];
+                dragOffset = {
+                    x: pos.x - measurement.x,
+                    y: pos.y - measurement.y
+                };
+                dragStartPos = { x: measurement.x, y: measurement.y };
+                isDragActive = true;
+                
+                // Visual feedback
+                canvas.style.cursor = 'grabbing';
+                document.querySelectorAll('.count-marker').forEach(m => m.classList.remove('dragging'));
+                const marker = document.querySelector(`.count-marker[data-index="${clickedCountIndex}"]`);
+                if (marker) marker.classList.add('dragging');
+                
+                showNotification('Drag to move count item');
+                return;
+            }
+            
+            if (currentTool === 'select') {
+                const clickedLineIndex = findClickedLine(pos.x, pos.y);
+                if (clickedLineIndex !== -1) {
+                    isDraggingLine = true;
+                    dragLineIndex = clickedLineIndex;
+                    tempPoints = [
+                        measurements[clickedLineIndex].start,
+                        measurements[clickedLineIndex].end
+                    ];
+                    return;
+                }
+            }
+            
+            if (currentTool === 'count') {
+                addCountMarker(pos.x, pos.y);
+            } else if (currentTool === 'linear') {
+                if (e.button === 0) {
+                    isDrawing = true;
+                    tempPoints = [pos];
+                    updateSnapInfo(findSnapPoint(pos.x, pos.y));
+                    redrawAll();
+                }
+            } else if (currentTool === 'area') {
+                if (e.button === 0) {
+                    tempPoints.push(pos);
+                    updateSnapInfo(findSnapPoint(pos.x, pos.y));
+                    redrawTemp(canvas);
+                    
+                    if (tempPoints.length >= 2) {
+                        document.getElementById('finishAreaBtn').style.display = 'inline-block';
+                    }
+                }
+            }
+        }
+
+        // Enhanced handleMouseMove to support dragging count items
+        function handleMouseMove(e, canvas) {
+            const pos = getCanvasPos(e, canvas);
+            const snapPoint = findSnapPoint(pos.x, pos.y);
+            updateSnapInfo(snapPoint);
+            
+            if (isCalibrating) {
+                if (calibrationPoints.length === 1) {
+                    drawCalibrationPreview(canvas, calibrationPoints[0], snapPoint ? { x: snapPoint.x, y: snapPoint.y } : pos);
+                }
+                return;
+            }
+            
+            // Handle dragging count items
+            if (isDraggingCount && draggedCountIndex !== -1) {
+                const measurement = measurements[draggedCountIndex];
+                let newX = pos.x - dragOffset.x;
+                let newY = pos.y - dragOffset.y;
+                
+                // Apply snap if enabled
+                if (snapEnabled && snapPoint) {
+                    newX = snapPoint.x;
+                    newY = snapPoint.y;
+                }
+                
+                // Update position
+                measurement.x = newX;
+                measurement.y = newY;
+                
+                // Update in category items
+                if (measurement.categoryId && countCategories[measurement.categoryId]) {
+                    const categoryItem = countCategories[measurement.categoryId].items.find(
+                        item => item.timestamp === measurement.timestamp
+                    );
+                    if (categoryItem) {
+                        categoryItem.x = newX;
+                        categoryItem.y = newY;
+                    }
+                }
+                
+                // Update marker position
+                const marker = document.querySelector(`.count-marker[data-index="${draggedCountIndex}"]`);
+                if (marker) {
+                    marker.style.left = (newX - 16) + 'px';
+                    marker.style.top = (newY - 16) + 'px';
+                }
+                
+                redrawAll();
+                return;
+            }
+            
+            if (isDraggingLine && dragLineIndex !== -1) {
+                const measurement = measurements[dragLineIndex];
+                const dx = pos.x - tempPoints[1].x;
+                const dy = pos.y - tempPoints[1].y;
+                
+                measurement.start.x = tempPoints[0].x + dx;
+                measurement.start.y = tempPoints[0].y + dy;
+                measurement.end.x = tempPoints[1].x + dx;
+                measurement.end.y = tempPoints[1].y + dy;
+                
+                const pixelDistance = Math.sqrt(
+                    Math.pow(measurement.end.x - measurement.start.x, 2) + 
+                    Math.pow(measurement.end.y - measurement.start.y, 2)
+                );
+                
+                if (pixelToUnit) {
+                    const meters = pixelDistance * pixelToUnit;
+                    const conversion = unitConversions[selectedUnit];
+                    measurement.value = parseFloat((meters / conversion).toFixed(3));
+                } else {
+                    measurement.value = parseFloat(pixelDistance.toFixed(2));
+                }
+                
+                redrawAll();
+                updateMeasurementsList();
+                return;
+            }
+            
+            if (currentTool === 'linear' && isDrawing) {
+                if (tempPoints.length === 1) {
+                    const endPoint = snapPoint ? { x: snapPoint.x, y: snapPoint.y } : pos;
+                    drawTemporaryLine(canvas, tempPoints[0], endPoint);
+                }
+            } else if (currentTool === 'area') {
+                if (tempPoints.length > 0) {
+                    redrawTemp(canvas, snapPoint ? { x: snapPoint.x, y: snapPoint.y } : pos);
+                }
+            }
+        }
+
+        // Enhanced handleMouseUp to handle count item dragging
+        function handleMouseUp(e, canvas) {
+            if (isCalibrating) return;
+            
+            if (isDraggingCount) {
+                isDraggingCount = false;
+                isDragActive = false;
+                const measurement = measurements[draggedCountIndex];
+                
+                // Only show notification if position actually changed
+                if (measurement && (measurement.x !== dragStartPos.x || measurement.y !== dragStartPos.y)) {
+                    showNotification('Count item moved');
+                }
+                
+                draggedCountIndex = -1;
+                canvas.style.cursor = getCursorForTool();
+                document.querySelectorAll('.count-marker').forEach(m => m.classList.remove('dragging'));
+                updateMeasurementsList();
+                return;
+            }
+            
+            if (isDraggingLine) {
+                isDraggingLine = false;
+                dragLineIndex = -1;
+                tempPoints = [];
+                showNotification('Line moved');
+                return;
+            }
+            
+            if (currentTool === 'linear' && isDrawing) {
+                const pos = getCanvasPos(e, canvas);
+                const snapPoint = findSnapPoint(pos.x, pos.y);
+                
+                if (tempPoints.length === 1) {
+                    const endPoint = snapPoint ? { x: snapPoint.x, y: snapPoint.y } : pos;
+                    
+                    const distance = Math.sqrt(
+                        Math.pow(endPoint.x - tempPoints[0].x, 2) + 
+                        Math.pow(endPoint.y - tempPoints[0].y, 2)
+                    );
+                    
+                    if (distance < 5) {
+                        showNotification('Line too short');
+                        cancelLineDrawing();
+                        return;
+                    }
+                    
+                    addLinearMeasurement(tempPoints[0], endPoint);
+                    tempPoints = [];
+                    isDrawing = false;
+                    redrawAll();
+                }
+            }
+        }
+
+        // Function to find clicked count item
+        function findClickedCountItem(x, y) {
+            const clickThreshold = 25; // Increased threshold for easier clicking
+            for (let i = 0; i < measurements.length; i++) {
+                const measurement = measurements[i];
+                if (measurement.type === 'count' && measurement.page === currentPage) {
+                    const distance = Math.sqrt(
+                        Math.pow(measurement.x - x, 2) + 
+                        Math.pow(measurement.y - y, 2)
+                    );
+                    if (distance < clickThreshold) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
+
+        // Enhanced deleteMeasurement with auto-correction
+        function deleteMeasurement(index) {
+            if (confirm('Are you sure you want to delete this measurement?')) {
+                const measurement = measurements[index];
+                
+                if (measurement.type === 'count' && measurement.categoryId && countCategories[measurement.categoryId]) {
+                    const category = countCategories[measurement.categoryId];
+                    
+                    // Remove from category items
+                    category.items = category.items.filter(item => item.timestamp !== measurement.timestamp);
+                    
+                    // Remove from measurements array
+                    measurements.splice(index, 1);
+                    
+                    // Auto-correct numbering - renumber all items in this category
+                    renumberCategoryItems(measurement.categoryId);
+                    
+                    // Update category counter to next available number
+                    if (category.items.length > 0) {
+                        const maxNumber = Math.max(...category.items.map(item => item.value));
+                        category.counter = maxNumber + 1;
+                    } else {
+                        category.counter = 1;
+                    }
+                    
+                    localStorage.setItem('smartquantify_countCategories', JSON.stringify(countCategories));
+                } else {
+                    measurements.splice(index, 1);
+                }
+                
+                selectedMeasurements = selectedMeasurements.filter(i => i !== index);
+                selectedMeasurements = selectedMeasurements.map(i => i > index ? i - 1 : i);
+                
+                redrawAll();
+                updateMeasurementsList();
+                updateCategorySelector();
+                updateQuickSummary();
+                showNotification('Measurement deleted and numbers reordered');
+            }
+        }
+
+        // Function to renumber all items in a category
+        function renumberCategoryItems(categoryId) {
+            const category = countCategories[categoryId];
+            if (!category) return;
+            
+            // Get all count measurements for this category and sort by their current position (or original order)
+            const categoryMeasurements = measurements
+                .filter(m => m.type === 'count' && m.categoryId === categoryId)
+                .sort((a, b) => {
+                    // Sort by original order if available, otherwise by value
+                    if (a.originalOrder !== undefined && b.originalOrder !== undefined) {
+                        return a.originalOrder - b.originalOrder;
+                    }
+                    return a.value - b.value;
+                });
+            
+            // Renumber sequentially
+            categoryMeasurements.forEach((measurement, newIndex) => {
+                const newNumber = newIndex + 1;
+                measurement.value = newNumber;
+                
+                // Update in category items
+                const categoryItem = category.items.find(item => item.timestamp === measurement.timestamp);
+                if (categoryItem) {
+                    categoryItem.value = newNumber;
+                }
+            });
+        }
+
+        // Enhanced addCountMarker to ensure correct numbering
+        function addCountMarker(x, y) {
+            const category = countCategories[activeCountCategory];
+            if (!category) return;
+            
+            // Get the next available number
+            const count = category.counter;
+            category.counter++;
+            
+            const measurement = {
+                type: 'count',
+                page: currentPage,
+                x: x,
+                y: y,
+                value: count,
+                name: category.name,
+                unit: 'items',
+                color: category.color,
+                categoryId: activeCountCategory,
+                timestamp: new Date().toISOString() + Math.random(), // Ensure unique timestamp
+                originalOrder: measurements.length // Store original order
+            };
+            
+            measurements.push(measurement);
+            
+            if (!category.items) category.items = [];
+            category.items.push(measurement);
+            
+            localStorage.setItem('smartquantify_countCategories', JSON.stringify(countCategories));
+            
+            redrawAll();
+            updateMeasurementsList();
+            updateCategorySelector();
+            updateQuickSummary();
+            showNotification(`${category.name} #${count} added`);
+        }
+
+        // Function to renumber all categories (can be called manually if needed)
+        function renumberAllCategories() {
+            Object.keys(countCategories).forEach(categoryId => {
+                renumberCategoryItems(categoryId);
+                
+                // Update counter for each category
+                const category = countCategories[categoryId];
+                if (category.items.length > 0) {
+                    const maxNumber = Math.max(...category.items.map(item => item.value));
+                    category.counter = maxNumber + 1;
+                } else {
+                    category.counter = 1;
+                }
+            });
+            
+            localStorage.setItem('smartquantify_countCategories', JSON.stringify(countCategories));
+            redrawAll();
+            updateMeasurementsList();
+            updateCategorySelector();
+            updateQuickSummary();
+            showNotification('All categories renumbered');
+        }
+
+        // ==================== COUNT SUMMARY FUNCTIONS ====================
+
+        function showCountSummary() {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'countSummaryModal';
+            modal.style.display = 'flex';
+            
+            const summary = calculateCountSummary();
+            
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 800px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="color: #1e293b;">📊 Count Items Summary</h3>
+                        <button onclick="closeSummaryModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px;">
+                            <div style="font-size: 14px; opacity: 0.9;">Total Items</div>
+                            <div style="font-size: 36px; font-weight: bold;">${summary.totalItems}</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: white; padding: 20px; border-radius: 12px;">
+                            <div style="font-size: 14px; opacity: 0.9;">Categories</div>
+                            <div style="font-size: 36px; font-weight: bold;">${summary.categoryCount}</div>
+                        </div>
+                        <div style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); color: white; padding: 20px; border-radius: 12px;">
+                            <div style="font-size: 14px; opacity: 0.9;">Pages</div>
+                            <div style="font-size: 36px; font-weight: bold;">${summary.pageCount}</div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-bottom: 15px; color: #1e293b;">📋 Category Breakdown</h4>
+                    <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                <tr>
+                                    <th style="padding: 12px; text-align: left;">Category</th>
+                                    <th style="padding: 12px; text-align: right;">Count</th>
+                                    <th style="padding: 12px; text-align: right;">Percentage</th>
+                                    <th style="padding: 12px; text-align: right;">Item Numbers</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${Object.entries(summary.categories).map(([id, cat]) => `
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td style="padding: 12px;">
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span style="display: inline-block; width: 16px; height: 16px; background: ${cat.color}; border-radius: 4px;"></span>
+                                                <strong>${cat.name}</strong>
+                                            </div>
+                                        </td>
+                                        <td style="padding: 12px; text-align: right; font-weight: bold;">${cat.count}</td>
+                                        <td style="padding: 12px; text-align: right; color: #64748b;">${cat.percentage}%</td>
+                                        <td style="padding: 12px; text-align: right; color: #2563eb; font-family: monospace;">
+                                            ${cat.itemNumbers.join(', ')}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot style="background: #f1f5f9; font-weight: bold;">
+                                <tr>
+                                    <td style="padding: 12px;">Total</td>
+                                    <td style="padding: 12px; text-align: right;">${summary.totalItems}</td>
+                                    <td style="padding: 12px; text-align: right;">100%</td>
+                                    <td style="padding: 12px; text-align: right;">-</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <h4 style="margin-bottom: 15px; color: #1e293b;">📄 Page-wise Summary</h4>
+                    <div style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="background: #f8fafc;">
+                                <tr>
+                                    <th style="padding: 8px; text-align: left;">Page</th>
+                                    ${Object.keys(summary.categories).map(id => `
+                                        <th style="padding: 8px; text-align: center;">${summary.categories[id].name}</th>
+                                    `).join('')}
+                                    <th style="padding: 8px; text-align: center;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${Object.entries(summary.byPage).map(([page, counts]) => `
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td style="padding: 8px; font-weight: bold;">Page ${page}</td>
+                                        ${Object.keys(summary.categories).map(id => `
+                                            <td style="padding: 8px; text-align: center;">${counts[id] || 0}</td>
+                                        `).join('')}
+                                        <td style="padding: 8px; text-align: center; font-weight: bold; background: #f8fafc;">
+                                            ${Object.values(counts).reduce((a, b) => a + b, 0)}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                        <button onclick="exportSummaryToCSV()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                            📊 Export Summary CSV
+                        </button>
+                        <button onclick="exportSummaryToJSON()" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                            📄 Export Summary JSON
+                        </button>
+                        <button onclick="closeSummaryModal()" style="background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function calculateCountSummary() {
+            const summary = {
+                totalItems: 0,
+                categoryCount: 0,
+                pageCount: new Set(),
+                categories: {},
+                byPage: {}
+            };
+            
+            const countMeasurements = measurements.filter(m => m.type === 'count');
+            
+            Object.entries(countCategories).forEach(([id, cat]) => {
+                summary.categories[id] = {
+                    name: cat.name,
+                    color: cat.color,
+                    count: 0,
+                    itemNumbers: [],
+                    percentage: 0
+                };
+            });
+            
+            countMeasurements.forEach(m => {
+                const page = m.page;
+                const categoryId = m.categoryId || 'doors';
+                const itemNumber = m.value;
+                
+                summary.pageCount.add(page);
+                
+                if (!summary.byPage[page]) {
+                    summary.byPage[page] = {};
+                }
+                summary.byPage[page][categoryId] = (summary.byPage[page][categoryId] || 0) + 1;
+                
+                if (summary.categories[categoryId]) {
+                    summary.categories[categoryId].count++;
+                    summary.categories[categoryId].itemNumbers.push(itemNumber);
+                }
+                
+                summary.totalItems++;
+            });
+            
+            Object.keys(summary.categories).forEach(id => {
+                if (summary.totalItems > 0) {
+                    summary.categories[id].percentage = ((summary.categories[id].count / summary.totalItems) * 100).toFixed(1);
+                } else {
+                    summary.categories[id].percentage = '0.0';
+                }
+                // Sort item numbers
+                summary.categories[id].itemNumbers.sort((a, b) => a - b);
+            });
+            
+            summary.categoryCount = Object.keys(summary.categories).filter(id => summary.categories[id].count > 0).length;
+            summary.pageCount = summary.pageCount.size;
+            
+            return summary;
+        }
+
+        function exportSummaryToCSV() {
+            const summary = calculateCountSummary();
+            
+            let csv = 'Category,Count,Percentage,Item Numbers\n';
+            
+            Object.entries(summary.categories).forEach(([id, cat]) => {
+                if (cat.count > 0) {
+                    csv += `"${cat.name}",${cat.count},${cat.percentage}%,"${cat.itemNumbers.join(', ')}"\n`;
+                }
+            });
+            
+            csv += '\nPage-wise Summary\n';
+            csv += 'Page,' + Object.values(summary.categories).map(c => `"${c.name}"`).join(',') + 'Total\n';
+            
+            Object.entries(summary.byPage).forEach(([page, counts]) => {
+                csv += `Page ${page},`;
+                Object.keys(summary.categories).forEach(id => {
+                    csv += `${counts[id] || 0},`;
+                });
+                csv += `${Object.values(counts).reduce((a, b) => a + b, 0)}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `count_summary_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('Summary exported to CSV');
+        }
+
+        function exportSummaryToJSON() {
+            const summary = calculateCountSummary();
+            
+            const exportData = {
+                generatedAt: new Date().toISOString(),
+                summary: summary,
+                categories: countCategories,
+                measurements: measurements.filter(m => m.type === 'count')
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `count_summary_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('Summary exported to JSON');
+        }
+
+        function closeSummaryModal() {
+            const modal = document.getElementById('countSummaryModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function updateQuickSummary() {
+            const summaryDiv = document.getElementById('quickSummary');
+            if (!summaryDiv) return;
+            
+            const countItems = measurements.filter(m => m.type === 'count');
+            const grouped = {};
+            
+            countItems.forEach(m => {
+                const catId = m.categoryId || 'doors';
+                if (!grouped[catId]) {
+                    grouped[catId] = 0;
+                }
+                grouped[catId]++;
+            });
+            
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="color: #1e293b; margin: 0;">📊 Quick Summary</h4>
+                    <span style="background: #2563eb; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">
+                        Total: ${countItems.length}
+                    </span>
+                </div>
+            `;
+            
+            if (countItems.length > 0) {
+                html += '<div style="display: grid; gap: 8px;">';
+                Object.entries(grouped).forEach(([catId, count]) => {
+                    const category = countCategories[catId];
+                    if (category) {
+                        html += `
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: ${category.color}; border-radius: 3px;"></span>
+                                    <span style="color: #1e293b;">${category.name}:</span>
+                                </div>
+                                <strong style="color: #2563eb;">${count}</strong>
+                            </div>
+                        `;
+                    }
+                });
+                html += '</div>';
+                
+                html += `
+                    <div style="margin-top: 10px; text-align: right;">
+                        <a href="#" onclick="showCountSummary(); return false;" style="color: #2563eb; text-decoration: none; font-size: 13px;">
+                            View detailed summary →
+                        </a>
+                    </div>
+                `;
+            } else {
+                html += '<p style="color: #64748b; font-size: 13px; margin: 0;">No count items yet</p>';
+            }
+            
+            summaryDiv.innerHTML = html;
+        }
+
+        function initSummaryFeatures() {
+            // Add summary button to toolbar
+            const summaryBtn = document.getElementById('summaryToolBtn');
+            if (summaryBtn) {
+                summaryBtn.onclick = showCountSummary;
+            }
+            
+            // Add summary button in category modal
+            const summaryModalBtn = document.getElementById('summaryBtnInModal');
+            if (summaryModalBtn) {
+                summaryModalBtn.onclick = () => {
+                    closeCategoryModal();
+                    showCountSummary();
+                };
+            }
+            
+            // Add renumber all button in category modal
+            const renumberAllBtn = document.getElementById('renumberAllBtn');
+            if (renumberAllBtn) {
+                renumberAllBtn.onclick = () => {
+                    if (confirm('This will renumber all items in sequence. Continue?')) {
+                        renumberAllCategories();
+                    }
+                };
+            }
+            
+            // Initialize quick summary
+            updateQuickSummary();
+        }
+
+        // ==================== PDF VIEWER & MEASUREMENT TOOLS ====================
+        
+        function initPDFViewer() {
+// ==================== CTRL + MOUSE WHEEL ZOOM ====================
+const pdfViewer = document.getElementById('pdfViewer');
+
+pdfViewer.addEventListener('wheel', function(e) {
+    // Only activate when CTRL key is pressed
+    if (e.ctrlKey) {
+        e.preventDefault(); // prevent browser zoom
+
+        if (e.deltaY < 0) {
+            zoomIn();   // scroll up → zoom in
+        } else {
+            zoomOut();  // scroll down → zoom out
+        }
+    }
+}, { passive: false });
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+            
+            const pdfInput = document.getElementById('pdfInput');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const snapStatus = document.getElementById('snapStatus');
+            
+            // Quality controls
+            const qualitySlider = document.getElementById('qualitySlider');
+            const smoothingSlider = document.getElementById('smoothingSlider');
+            const refreshBtn = document.getElementById('refreshPdfBtn');
+            
+            qualitySlider.addEventListener('input', function(e) {
+                qualityMultiplier = parseFloat(e.target.value);
+                document.getElementById('qualityValue').textContent = qualityMultiplier.toFixed(1) + 'x';
+                document.getElementById('qualityDisplay').textContent = qualityMultiplier.toFixed(1) + 'x';
+            });
+            
+            smoothingSlider.addEventListener('input', function(e) {
+                imageSmoothing = parseFloat(e.target.value);
+                document.getElementById('smoothingValue').textContent = imageSmoothing.toFixed(1);
+            });
+            
+            refreshBtn.addEventListener('click', function() {
+                if (pdfDoc) {
+                    renderPage(currentPage);
+                    showNotification('PDF refreshed with new quality settings');
+                }
+            });
+            
+            // Tool buttons
+            document.getElementById('selectTool').addEventListener('click', () => setTool('select'));
+            document.getElementById('linearTool').addEventListener('click', () => setTool('linear'));
+            document.getElementById('areaTool').addEventListener('click', () => setTool('area'));
+            document.getElementById('countTool').addEventListener('click', () => setTool('count'));
+            document.getElementById('calibrateBtn').addEventListener('click', () => startCalibration());
+            document.getElementById('finishAreaBtn').addEventListener('click', finishArea);
+            document.getElementById('clearBtn').addEventListener('click', clearAll);
+            
+            // File upload
+            pdfInput.addEventListener('change', handleFileUpload);
+            
+            // Navigation
+            prevBtn.addEventListener('click', prevPage);
+            nextBtn.addEventListener('click', nextPage);
+            
+            // Snap controls
+            document.getElementById('snapToggle').addEventListener('change', function() {
+                snapEnabled = this.checked;
+                snapStatus.textContent = snapEnabled ? 'ON' : 'OFF';
+                snapStatus.style.color = snapEnabled ? '#10b981' : '#ef4444';
+                redrawAll();
+            });
+            
+            document.getElementById('snapMode').addEventListener('change', function() {
+                snapMode = this.value;
+                redrawAll();
+            });
+            
+            document.getElementById('snapTolerance').addEventListener('input', function(e) {
+                snapTolerance = parseInt(e.target.value);
+                document.getElementById('toleranceValue').textContent = snapTolerance + 'px';
+            });
+            
+            // Category selector change
+            document.getElementById('countCategorySelector').addEventListener('change', function(e) {
+                activeCountCategory = e.target.value;
+                if (countCategories[activeCountCategory]) {
+                    document.getElementById('countColor').value = countCategories[activeCountCategory].color;
+                }
+            });
+            
+            // Color picker sync with category
+            document.getElementById('countColor').addEventListener('input', function(e) {
+                if (countCategories[activeCountCategory]) {
+                    countCategories[activeCountCategory].color = e.target.value;
+                    updateCategorySelector();
+                }
+            });
+            
+            // Unit selector
+            document.getElementById('unitSelector').addEventListener('change', function() {
+                selectedUnit = this.value;
+                updateScaleDisplay();
+                updateMeasurementsList();
+                redrawAll();
+            });
+            
+            // Save/Load/Export
+            document.getElementById('saveBtn').addEventListener('click', saveProject);
+            document.getElementById('loadBtn').addEventListener('click', loadProject);
+            document.getElementById('exportJsonBtn').addEventListener('click', exportToJSON);
+            document.getElementById('exportCsvBtn').addEventListener('click', exportToCSV);
+            
+            // Google Drive button
+            document.getElementById('googleDriveBtn').addEventListener('click', openGoogleDriveModal);
+            
+            // Initialize count categories
+            initCountCategories();
+            
+            setTool('linear');
+        }
+        
+        async function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (file.type !== 'application/pdf') {
+                alert('Please upload a PDF file');
+                return;
+            }
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                
+                const loadingTask = pdfjsLib.getDocument({
+                    data: arrayBuffer,
+                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/cmaps/',
+                    cMapPacked: true,
+                    enableXfa: true
+                });
+                
+                pdfDoc = await loadingTask.promise;
+                currentPage = 1;
+                await renderPage(currentPage);
+                showNotification('PDF loaded successfully! You can now start measuring.');
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+                alert('Error loading PDF file. Please try again.');
+            }
+        }
+        
+        async function renderPage(pageNum) {
+            if (!pdfDoc) return;
+            
+            try {
+                const page = await pdfDoc.getPage(pageNum);
+                
+                const unscaledViewport = page.getViewport({ scale: 1.0 });
+                const scale = baseScale * qualityMultiplier * currentZoom;
+                const viewport = page.getViewport({ scale: scale });
+                
+                const container = document.getElementById('canvasContainer');
+                container.innerHTML = '';
+                
+                const pdfCanvas = document.createElement('canvas');
+                pdfCanvas.id = 'pdfCanvas';
+                pdfCanvas.width = viewport.width;
+                pdfCanvas.height = viewport.height;
+                pdfCanvas.style.width = viewport.width + 'px';
+                pdfCanvas.style.height = viewport.height + 'px';
+                pdfCanvas.style.display = 'block';
+                
+                const drawCanvas = document.createElement('canvas');
+                drawCanvas.id = 'drawingCanvas';
+                drawCanvas.width = pdfCanvas.width;
+                drawCanvas.height = pdfCanvas.height;
+                drawCanvas.style.position = 'absolute';
+                drawCanvas.style.left = '0';
+                drawCanvas.style.top = '0';
+                drawCanvas.style.cursor = getCursorForTool();
+                drawCanvas.style.pointerEvents = 'auto';
+                
+                container.appendChild(pdfCanvas);
+                container.appendChild(drawCanvas);
+                
+                container.style.width = pdfCanvas.width + 'px';
+                container.style.height = pdfCanvas.height + 'px';
+                
+                const ctx = pdfCanvas.getContext('2d', {
+                    alpha: false,
+                    willReadFrequently: false
+                });
+                
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.patternQuality = 'best';
+                
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport,
+                    enableWebGL: true,
+                    renderInteractiveForms: false,
+                    background: 'white'
+                };
+                
+                await page.render(renderContext).promise;
+                
+                if (imageSmoothing > 0) {
+                    ctx.filter = `blur(${imageSmoothing * 0.5}px)`;
+                }
+                
+                document.getElementById('pageInfo').textContent = `Page: ${pageNum} / ${pdfDoc.numPages}`;
+                document.getElementById('zoomDisplay').textContent = `${Math.round(currentZoom * 100)}%`;
+                
+                attachCanvasEvents(drawCanvas);
+                
+                scaleMeasurementsToNewResolution(unscaledViewport, viewport);
+                
+                redrawAll();
+                updateQuickSummary();
+                
+            } catch (error) {
+                console.error('Error rendering page:', error);
+                showNotification('Error rendering PDF page');
+            }
+        }
+        
+        function scaleMeasurementsToNewResolution(oldViewport, newViewport) {
+            if (!measurements.length) return;
+            
+            const scaleX = newViewport.width / oldViewport.width;
+            const scaleY = newViewport.height / oldViewport.height;
+            
+            measurements.forEach(measurement => {
+                if (measurement.page === currentPage) {
+                    if (measurement.type === 'count') {
+                        measurement.x *= scaleX;
+                        measurement.y *= scaleY;
+                    } else if (measurement.type === 'linear') {
+                        measurement.start.x *= scaleX;
+                        measurement.start.y *= scaleY;
+                        measurement.end.x *= scaleX;
+                        measurement.end.y *= scaleY;
+                    } else if (measurement.type === 'area') {
+                        measurement.points.forEach(point => {
+                            point.x *= scaleX;
+                            point.y *= scaleY;
+                        });
+                    }
+                }
+            });
+        }
+        
+        function attachCanvasEvents(canvas) {
+            canvas.onmousedown = (e) => handleMouseDown(e, canvas);
+            canvas.onmousemove = (e) => handleMouseMove(e, canvas);
+            canvas.onmouseup = (e) => handleMouseUp(e, canvas);
+            canvas.oncontextmenu = (e) => {
+                e.preventDefault();
+                if (currentTool === 'area' && tempPoints.length > 0) {
+                    finishArea();
+                } else if (currentTool === 'linear' && isDrawing) {
+                    cancelLineDrawing();
+                }
+            };
+        }
+        
+        function getCanvasPos(e, canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            let x = (e.clientX - rect.left) * scaleX;
+            let y = (e.clientY - rect.top) * scaleY;
+            
+            if (snapEnabled) {
+                const snapped = findSnapPoint(x, y);
+                if (snapped) {
+                    x = snapped.x;
+                    y = snapped.y;
+                }
+            }
+            
+            return { x, y };
+        }
+        
+        function findSnapPoint(x, y) {
+            if (!snapEnabled) return null;
+            
+            let nearestPoint = null;
+            let minDistance = snapTolerance;
+            
+            if (snapMode === 'grid') {
+                const gridX = Math.round(x / gridSize) * gridSize;
+                const gridY = Math.round(y / gridSize) * gridSize;
+                const dist = Math.sqrt(Math.pow(gridX - x, 2) + Math.pow(gridY - y, 2));
+                
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    nearestPoint = {
+                        x: gridX,
+                        y: gridY,
+                        type: 'Grid Point'
+                    };
+                }
+            }
+            
+            const pageMeasurements = measurements.filter(m => m.page === currentPage);
+            
+            for (const measurement of pageMeasurements) {
+                if (measurement.type === 'count') {
+                    const dist = Math.sqrt(Math.pow(measurement.x - x, 2) + Math.pow(measurement.y - y, 2));
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        nearestPoint = {
+                            x: measurement.x,
+                            y: measurement.y,
+                            type: 'Count Point',
+                            measurement: measurement
+                        };
+                    }
+                } else if (measurement.type === 'linear') {
+                    if (snapMode === 'endpoints' || snapMode === 'all') {
+                        const dist1 = Math.sqrt(Math.pow(measurement.start.x - x, 2) + Math.pow(measurement.start.y - y, 2));
+                        const dist2 = Math.sqrt(Math.pow(measurement.end.x - x, 2) + Math.pow(measurement.end.y - y, 2));
+                        
+                        if (dist1 < minDistance) {
+                            minDistance = dist1;
+                            nearestPoint = {
+                                x: measurement.start.x,
+                                y: measurement.start.y,
+                                type: 'Line Endpoint',
+                                measurement: measurement
+                            };
+                        }
+                        if (dist2 < minDistance) {
+                            minDistance = dist2;
+                            nearestPoint = {
+                                x: measurement.end.x,
+                                y: measurement.end.y,
+                                type: 'Line Endpoint',
+                                measurement: measurement
+                            };
+                        }
+                    }
+                    
+                    if (snapMode === 'midpoints' || snapMode === 'all') {
+                        const midX = (measurement.start.x + measurement.end.x) / 2;
+                        const midY = (measurement.start.y + measurement.end.y) / 2;
+                        const dist = Math.sqrt(Math.pow(midX - x, 2) + Math.pow(midY - y, 2));
+                        
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            nearestPoint = {
+                                x: midX,
+                                y: midY,
+                                type: 'Line Midpoint',
+                                measurement: measurement
+                            };
+                        }
+                    }
+                    
+                    if (snapMode === 'all') {
+                        const lineVec = {
+                            x: measurement.end.x - measurement.start.x,
+                            y: measurement.end.y - measurement.start.y
+                        };
+                        const lineLength = Math.sqrt(lineVec.x * lineVec.x + lineVec.y * lineVec.y);
+                        
+                        if (lineLength > 0) {
+                            const toPointVec = {
+                                x: x - measurement.start.x,
+                                y: y - measurement.start.y
+                            };
+                            
+                            const dot = (toPointVec.x * lineVec.x + toPointVec.y * lineVec.y) / (lineLength * lineLength);
+                            let projX, projY;
+                            
+                            if (dot < 0) {
+                                projX = measurement.start.x;
+                                projY = measurement.start.y;
+                            } else if (dot > 1) {
+                                projX = measurement.end.x;
+                                projY = measurement.end.y;
+                            } else {
+                                projX = measurement.start.x + dot * lineVec.x;
+                                projY = measurement.start.y + dot * lineVec.y;
+                            }
+                            
+                            const dist = Math.sqrt(Math.pow(projX - x, 2) + Math.pow(projY - y, 2));
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                nearestPoint = {
+                                    x: projX,
+                                    y: projY,
+                                    type: 'Line Perpendicular',
+                                    measurement: measurement
+                                };
+                            }
+                        }
+                    }
+                } else if (measurement.type === 'area') {
+                    if (snapMode === 'endpoints' || snapMode === 'all') {
+                        for (const point of measurement.points) {
+                            const dist = Math.sqrt(Math.pow(point.x - x, 2) + Math.pow(point.y - y, 2));
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                nearestPoint = {
+                                    x: point.x,
+                                    y: point.y,
+                                    type: 'Polygon Vertex',
+                                    measurement: measurement
+                                };
+                            }
+                        }
+                    }
+                    
+                    if (snapMode === 'midpoints' || snapMode === 'all') {
+                        for (let i = 0; i < measurement.points.length; i++) {
+                            const p1 = measurement.points[i];
+                            const p2 = measurement.points[(i + 1) % measurement.points.length];
+                            const midX = (p1.x + p2.x) / 2;
+                            const midY = (p1.y + p2.y) / 2;
+                            const dist = Math.sqrt(Math.pow(midX - x, 2) + Math.pow(midY - y, 2));
+                            
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                nearestPoint = {
+                                    x: midX,
+                                    y: midY,
+                                    type: 'Edge Midpoint',
+                                    measurement: measurement
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            
+            for (const point of tempPoints) {
+                const dist = Math.sqrt(Math.pow(point.x - x, 2) + Math.pow(point.y - y, 2));
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    nearestPoint = {
+                        x: point.x,
+                        y: point.y,
+                        type: 'Temporary Point'
+                    };
+                }
+            }
+            
+            for (const point of calibrationPoints) {
+                const dist = Math.sqrt(Math.pow(point.x - x, 2) + Math.pow(point.y - y, 2));
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    nearestPoint = {
+                        x: point.x,
+                        y: point.y,
+                        type: 'Calibration Point'
+                    };
+                }
+            }
+            
+            return nearestPoint;
+        }
+        
+        function updateSnapInfo(snapPoint) {
+            const snapInfo = document.getElementById('snapInfo');
+            if (snapPoint) {
+                snapInfo.textContent = `Snapped to: ${snapPoint.type}`;
+                snapInfo.style.display = 'block';
+                currentSnapPoint = snapPoint;
+                
+                const markers = document.querySelectorAll('.snap-point');
+                markers.forEach(m => m.remove());
+                
+                const marker = document.createElement('div');
+                marker.className = 'snap-point';
+                marker.style.left = (snapPoint.x - 6) + 'px';
+                marker.style.top = (snapPoint.y - 6) + 'px';
+                document.getElementById('canvasContainer').appendChild(marker);
+            } else {
+                snapInfo.style.display = 'none';
+                currentSnapPoint = null;
+                document.querySelectorAll('.snap-point').forEach(m => m.remove());
+            }
+        }
+        
+        function findClickedLine(x, y) {
+            const clickThreshold = 10;
+            for (let i = 0; i < measurements.length; i++) {
+                const measurement = measurements[i];
+                if (measurement.type === 'linear' && measurement.page === currentPage) {
+                    const start = measurement.start;
+                    const end = measurement.end;
+                    
+                    const A = x - start.x;
+                    const B = y - start.y;
+                    const C = end.x - start.x;
+                    const D = end.y - start.y;
+                    
+                    const dot = A * C + B * D;
+                    const lenSq = C * C + D * D;
+                    let param = -1;
+                    if (lenSq !== 0) param = dot / lenSq;
+                    
+                    let xx, yy;
+                    
+                    if (param < 0) {
+                        xx = start.x;
+                        yy = start.y;
+                    } else if (param > 1) {
+                        xx = end.x;
+                        yy = end.y;
+                    } else {
+                        xx = start.x + param * C;
+                        yy = start.y + param * D;
+                    }
+                    
+                    const dx = x - xx;
+                    const dy = y - yy;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < clickThreshold) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
+        
+        function cancelLineDrawing() {
+            isDrawing = false;
+            tempPoints = [];
+            redrawAll();
+            showNotification('Line drawing cancelled');
+        }
+        
+        function drawTemporaryLine(canvas, start, end) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            redrawPersisted(ctx);
+            
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(end.x, end.y);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#2563eb';
+            ctx.beginPath();
+            ctx.arc(start.x, start.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(end.x, end.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            const distance = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+            const midX = (start.x + end.x) / 2;
+            const midY = (start.y + end.y) / 2;
+            
+            ctx.fillStyle = '#2563eb';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            let displayText = `${distance.toFixed(1)}px`;
+            if (pixelToUnit) {
+                const meters = distance * pixelToUnit;
+                const conversion = unitConversions[selectedUnit];
+                const value = (meters / conversion).toFixed(3);
+                displayText = `${value} ${selectedUnit}`;
+            }
+            
+            const textWidth = ctx.measureText(displayText).width;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillRect(midX - textWidth/2 - 5, midY - 15, textWidth + 10, 20);
+            
+            ctx.fillStyle = '#2563eb';
+            ctx.fillText(displayText, midX, midY - 5);
+            
+            ctx.setLineDash([]);
+        }
+        
+        function getCursorForTool() {
+            switch(currentTool) {
+                case 'select': return 'pointer';
+                case 'linear': return 'crosshair';
+                case 'area': return 'crosshair';
+                case 'count': return 'crosshair';
+                case 'calibrate': return 'crosshair';
+                default: return 'default';
+            }
+        }
+        
+        function setTool(tool) {
+            currentTool = tool;
+            document.getElementById('currentToolDisplay').textContent = tool.charAt(0).toUpperCase() + tool.slice(1);
+            
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            const toolBtn = document.getElementById(tool + 'Tool');
+            if (toolBtn) toolBtn.classList.add('active');
+            
+            isDrawing = false;
+            tempPoints = [];
+            isCalibrating = false;
+            calibrationPoints = [];
+            isDraggingLine = false;
+            dragLineIndex = -1;
+            document.getElementById('finishAreaBtn').style.display = 'none';
+            updateSnapInfo(null);
+            
+            const canvas = document.getElementById('drawingCanvas');
+            if (canvas) {
+                canvas.style.cursor = getCursorForTool();
+            }
+            
+            redrawAll();
+        }
+        
+        function startCalibration() {
+            isCalibrating = true;
+            calibrationPoints = [];
+            currentTool = 'calibrate';
+            document.getElementById('currentToolDisplay').textContent = 'Calibrate';
+            
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('calibrateBtn').classList.add('active');
+            
+            showNotification('Click on two points with known distance to calibrate scale');
+        }
+        
+        function showCalibrationModal() {
+            const pixelDistance = Math.sqrt(
+                Math.pow(calibrationPoints[1].x - calibrationPoints[0].x, 2) + 
+                Math.pow(calibrationPoints[1].y - calibrationPoints[0].y, 2)
+            );
+            
+            document.getElementById('pixelDistance').textContent = pixelDistance.toFixed(2);
+            document.getElementById('calibrationLength').value = '';
+            document.getElementById('calibrationUnit').value = selectedUnit;
+            document.getElementById('calibrationModal').classList.add('active');
+        }
+        
+        function cancelCalibration() {
+            isCalibrating = false;
+            calibrationPoints = [];
+            setTool('linear');
+            closeModal();
+        }
+        
+        function applyCalibration() {
+            const realLength = parseFloat(document.getElementById('calibrationLength').value);
+            const unit = document.getElementById('calibrationUnit').value;
+            
+            if (!realLength || realLength <= 0 || isNaN(realLength)) {
+                alert('Please enter a valid positive number for the length');
+                return;
+            }
+            
+            const pixelDistance = Math.sqrt(
+                Math.pow(calibrationPoints[1].x - calibrationPoints[0].x, 2) + 
+                Math.pow(calibrationPoints[1].y - calibrationPoints[0].y, 2)
+            );
+            
+            const realInMeters = realLength * unitConversions[unit];
+            pixelToUnit = realInMeters / pixelDistance;
+            
+            selectedUnit = unit;
+            document.getElementById('unitSelector').value = unit;
+            
+            updateScaleDisplay();
+            
+            measurements.push({
+                type: 'linear',
+                page: currentPage,
+                start: calibrationPoints[0],
+                end: calibrationPoints[1],
+                value: realLength,
+                unit: unit,
+                color: '#f59e0b',
+                isCalibration: true
+            });
+            
+            updateAllMeasurementsWithNewScale();
+            
+            isCalibrating = false;
+            calibrationPoints = [];
+            closeModal();
+            setTool('linear');
+            
+            showNotification(`Scale calibrated: 1px = ${(pixelToUnit / unitConversions[unit]).toFixed(6)} ${unit}`);
+        }
+        
+        function updateAllMeasurementsWithNewScale() {
+            measurements.forEach(measurement => {
+                if (measurement.type === 'linear' && !measurement.isCalibration) {
+                    const pixelDistance = Math.sqrt(
+                        Math.pow(measurement.end.x - measurement.start.x, 2) + 
+                        Math.pow(measurement.end.y - measurement.start.y, 2)
+                    );
+                    const meters = pixelDistance * pixelToUnit;
+                    const conversion = unitConversions[selectedUnit];
+                    measurement.value = parseFloat((meters / conversion).toFixed(3));
+                    measurement.unit = selectedUnit;
+                } else if (measurement.type === 'area') {
+                    const pixelArea = polygonArea(measurement.points);
+                    const squareMeters = pixelArea * pixelToUnit * pixelToUnit;
+                    const conversion = unitConversions[selectedUnit];
+                    const squareConversion = conversion * conversion;
+                    measurement.value = parseFloat((squareMeters / squareConversion).toFixed(3));
+                    measurement.unit = selectedUnit === 'm' ? 'm²' : 
+                                    selectedUnit === 'mm' ? 'mm²' :
+                                    selectedUnit === 'cm' ? 'cm²' :
+                                    selectedUnit === 'in' ? 'in²' : 'ft²';
+                }
+            });
+            
+            updateMeasurementsList();
+            redrawAll();
+        }
+        
+        function drawCalibrationPreview(canvas, start, end) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            redrawPersisted(ctx);
+            
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            
+            ctx.beginPath();
+            ctx.moveTo(start.x, start.y);
+            ctx.lineTo(end.x, end.y);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#f59e0b';
+            [start, end].forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            const distance = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+            const midX = (start.x + end.x) / 2;
+            const midY = (start.y + end.y) / 2;
+            
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${distance.toFixed(1)}px`, midX, midY - 10);
+            
+            ctx.setLineDash([]);
+        }
+        
+        function addLinearMeasurement(start, end) {
+            const pixelDistance = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+            let value, unit;
+            
+            if (pixelToUnit) {
+                const meters = pixelDistance * pixelToUnit;
+                const conversion = unitConversions[selectedUnit];
+                value = (meters / conversion).toFixed(3);
+                unit = selectedUnit;
+            } else {
+                value = pixelDistance.toFixed(2);
+                unit = 'px';
+            }
+            
+            measurements.push({
+                type: 'linear',
+                page: currentPage,
+                start: start,
+                end: end,
+                value: parseFloat(value),
+                unit: unit,
+                color: '#2563eb',
+                isCalibration: false
+            });
+            
+            updateMeasurementsList();
+            showNotification(`Linear measurement: ${value} ${unit}`);
+        }
+        
+        function finishArea() {
+            if (tempPoints.length < 3) {
+                alert('Need at least 3 points for an area');
+                return;
+            }
+            
+            const pixelArea = polygonArea(tempPoints);
+            let value, unit;
+            
+            if (pixelToUnit) {
+                const squareMeters = pixelArea * pixelToUnit * pixelToUnit;
+                const conversion = unitConversions[selectedUnit];
+                const squareConversion = conversion * conversion;
+                value = (squareMeters / squareConversion).toFixed(3);
+                unit = selectedUnit === 'm' ? 'm²' : 
+                       selectedUnit === 'mm' ? 'mm²' :
+                       selectedUnit === 'cm' ? 'cm²' :
+                       selectedUnit === 'in' ? 'in²' : 'ft²';
+            } else {
+                value = pixelArea.toFixed(2);
+                unit = 'px²';
+            }
+            
+            measurements.push({
+                type: 'area',
+                page: currentPage,
+                points: [...tempPoints],
+                value: parseFloat(value),
+                unit: unit,
+                color: '#10b981'
+            });
+            
+            tempPoints = [];
+            document.getElementById('finishAreaBtn').style.display = 'none';
+            redrawAll();
+            updateMeasurementsList();
+            showNotification(`Area measurement: ${value} ${unit}`);
+        }
+        
+        function redrawTemp(canvas, currentPos = null) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            redrawPersisted(ctx);
+            
+            ctx.strokeStyle = '#2563eb';
+            ctx.fillStyle = 'rgba(37, 99, 235, 0.1)';
+            ctx.lineWidth = 2;
+            
+            if (currentTool === 'area' && tempPoints.length > 0) {
+                ctx.beginPath();
+                ctx.moveTo(tempPoints[0].x, tempPoints[0].y);
+                
+                for (let i = 1; i < tempPoints.length; i++) {
+                    ctx.lineTo(tempPoints[i].x, tempPoints[i].y);
+                }
+                
+                if (currentPos) {
+                    ctx.lineTo(currentPos.x, currentPos.y);
+                }
+                
+                if (tempPoints.length >= 2) {
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                
+                ctx.stroke();
+                
+                ctx.fillStyle = '#2563eb';
+                for (const point of tempPoints) {
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                if (tempPoints.length >= 3 || (tempPoints.length >= 2 && currentPos)) {
+                    const points = currentPos ? [...tempPoints, currentPos] : tempPoints;
+                    const area = polygonArea(points);
+                    const centroid = polygonCentroid(points);
+                    
+                    ctx.fillStyle = '#1e293b';
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'center';
+                    
+                    let areaText = `${area.toFixed(1)}px²`;
+                    if (pixelToUnit) {
+                        const squareMeters = area * pixelToUnit * pixelToUnit;
+                        const conversion = unitConversions[selectedUnit];
+                        const squareConversion = conversion * conversion;
+                        const value = (squareMeters / squareConversion).toFixed(3);
+                        const unit = selectedUnit === 'm' ? 'm²' : 
+                                   selectedUnit === 'mm' ? 'mm²' :
+                                   selectedUnit === 'cm' ? 'cm²' :
+                                   selectedUnit === 'in' ? 'in²' : 'ft²';
+                        areaText = `${value} ${unit}`;
+                    }
+                    
+                    ctx.fillText(areaText, centroid.x, centroid.y);
+                }
+            }
+        }
+        
+        function redrawAll() {
+            const canvas = document.getElementById('drawingCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            document.querySelectorAll('.count-marker, .snap-point, .measurement-info').forEach(marker => marker.remove());
+            
+            redrawPersisted(ctx);
+            
+            measurements.forEach((measurement, index) => {
+                if (measurement.type === 'count' && measurement.page === currentPage) {
+                    const marker = document.createElement('div');
+                    marker.className = 'count-marker';
+                    marker.setAttribute('data-index', index);
+                    if (isDraggingCount && draggedCountIndex === index) {
+                        marker.classList.add('dragging');
+                    }
+                    marker.style.position = 'absolute';
+                    marker.style.left = (measurement.x - 16) + 'px';
+                    marker.style.top = (measurement.y - 16) + 'px';
+                    marker.style.backgroundColor = measurement.color;
+                    marker.style.color = getContrastColor(measurement.color);
+                    
+                    const category = countCategories[measurement.categoryId || 'doors'];
+                    marker.title = `${category ? category.name : 'Item'} #${measurement.value}`;
+                    
+                    marker.textContent = measurement.value;
+                    
+                    const badge = document.createElement('span');
+                    badge.className = 'category-badge';
+                    badge.style.backgroundColor = 'white';
+                    badge.style.color = measurement.color;
+                    badge.style.border = `1px solid ${measurement.color}`;
+                    badge.textContent = (category ? category.name.charAt(0) : '?').toUpperCase();
+                    marker.appendChild(badge);
+                    
+                    if (selectedMeasurements.includes(index)) {
+                        marker.style.boxShadow = '0 0 0 3px #f59e0b';
+                    }
+                    
+                    document.getElementById('canvasContainer').appendChild(marker);
+                }
+            });
+        }
+        
+        function redrawPersisted(ctx) {
+            measurements.forEach((measurement, index) => {
+                if (measurement.page !== currentPage) return;
+                
+                const isSelected = selectedMeasurements.includes(index);
+                
+                if (measurement.type === 'linear') {
+                    ctx.strokeStyle = measurement.isCalibration ? '#f59e0b' : (isSelected ? '#f59e0b' : measurement.color);
+                    ctx.lineWidth = measurement.isCalibration ? 3 : (isSelected ? 4 : 3);
+                    ctx.setLineDash(measurement.isCalibration ? [5, 5] : (isSelected ? [5, 5] : []));
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(measurement.start.x, measurement.start.y);
+                    ctx.lineTo(measurement.end.x, measurement.end.y);
+                    ctx.stroke();
+                    
+                    if (isSelected || measurement.isCalibration) {
+                        ctx.fillStyle = measurement.isCalibration ? '#f59e0b' : '#f59e0b';
+                        ctx.beginPath();
+                        ctx.arc(measurement.start.x, measurement.start.y, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(measurement.end.x, measurement.end.y, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    const midX = (measurement.start.x + measurement.end.x) / 2;
+                    const midY = (measurement.start.y + measurement.end.y) / 2;
+                    
+                    const infoElement = document.createElement('div');
+                    infoElement.className = 'measurement-info';
+                    infoElement.textContent = `${measurement.value} ${measurement.unit}`;
+                    infoElement.style.left = midX + 'px';
+                    infoElement.style.top = midY + 'px';
+                    
+                    if (measurement.isCalibration) {
+                        infoElement.style.background = 'rgba(245, 158, 11, 0.95)';
+                    } else if (isSelected) {
+                        infoElement.style.background = 'rgba(245, 158, 11, 0.95)';
+                    }
+                    
+                    document.getElementById('canvasContainer').appendChild(infoElement);
+                    
+                } else if (measurement.type === 'area') {
+                    ctx.fillStyle = isSelected ? 'rgba(245, 158, 11, 0.2)' : 
+                                  hexToRGBA(measurement.color, 0.15);
+                    ctx.strokeStyle = isSelected ? '#f59e0b' : measurement.color;
+                    ctx.lineWidth = isSelected ? 3 : 2;
+                    ctx.setLineDash(isSelected ? [5, 5] : []);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(measurement.points[0].x, measurement.points[0].y);
+                    
+                    for (let i = 1; i < measurement.points.length; i++) {
+                        ctx.lineTo(measurement.points[i].x, measurement.points[i].y);
+                    }
+                    
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    const centroid = polygonCentroid(measurement.points);
+                    const infoElement = document.createElement('div');
+                    infoElement.className = 'measurement-info';
+                    infoElement.textContent = `${measurement.value} ${measurement.unit}`;
+                    infoElement.style.left = centroid.x + 'px';
+                    infoElement.style.top = centroid.y + 'px';
+                    
+                    if (isSelected) {
+                        infoElement.style.background = 'rgba(245, 158, 11, 0.95)';
+                    }
+                    
+                    document.getElementById('canvasContainer').appendChild(infoElement);
+                }
+            });
+            
+            ctx.setLineDash([]);
+        }
+        
+        // ==================== SCROLL AND ZOOM CONTROLS ====================
+        
+        function scrollViewer(direction) {
+            const container = document.getElementById('pdfViewer');
+            const scrollAmount = 100;
+            
+            switch(direction) {
+                case 'up':
+                    container.scrollTop -= scrollAmount;
+                    break;
+                case 'down':
+                    container.scrollTop += scrollAmount;
+                    break;
+                case 'left':
+                    container.scrollLeft -= scrollAmount;
+                    break;
+                case 'right':
+                    container.scrollLeft += scrollAmount;
+                    break;
+            }
+        }
+        
+        function centerView() {
+            const container = document.getElementById('pdfViewer');
+            const canvasContainer = document.getElementById('canvasContainer');
+            
+            if (canvasContainer) {
+                container.scrollLeft = (canvasContainer.scrollWidth - container.clientWidth) / 2;
+                container.scrollTop = (canvasContainer.scrollHeight - container.clientHeight) / 2;
+            }
+        }
+        
+        function zoomIn() {
+            if (currentZoom < 3.0) {
+                currentZoom += 0.1;
+                updateZoom();
+            }
+        }
+        
+        function zoomOut() {
+            if (currentZoom > 0.3) {
+                currentZoom -= 0.1;
+                updateZoom();
+            }
+        }
+        
+        function resetZoom() {
+            currentZoom = 1.0;
+            updateZoom();
+        }
+        
+        function updateZoom() {
+            document.getElementById('zoomDisplay').textContent = `${Math.round(currentZoom * 100)}%`;
+            if (pdfDoc) {
+                renderPage(currentPage);
+            }
+        }
+        
+        function updateScaleDisplay() {
+            if (pixelToUnit) {
+                const conversion = unitConversions[selectedUnit];
+                const displayValue = (pixelToUnit / conversion).toFixed(6);
+                document.getElementById('scaleDisplay').textContent = `1px = ${displayValue} ${selectedUnit}`;
+            } else {
+                document.getElementById('scaleDisplay').textContent = 'Not set';
+            }
+        }
+        
+        // ==================== MEASUREMENT MANAGEMENT ====================
+        
+        function updateMeasurementsList() {
+            const list = document.getElementById('measurementsList');
+            const pageMeasurements = measurements.filter(m => m.page === currentPage);
+            
+            if (pageMeasurements.length === 0) {
+                list.innerHTML = `
+                    <div class="measurement-item">
+                        <h4>No measurements yet</h4>
+                        <p>Start measuring by uploading a PDF and using the tools</p>
+                    </div>
+                `;
+                document.getElementById('totalMeasurements').textContent = '0';
+            } else {
+                list.innerHTML = pageMeasurements.map((measurement, index) => {
+                    const globalIndex = measurements.findIndex(m => m === measurement);
+                    const isSelected = selectedMeasurements.includes(globalIndex);
+                    
+                    let details = '';
+                    let icon = '';
+                    if (measurement.type === 'count') {
+                        const category = countCategories[measurement.categoryId || 'doors'];
+                        const categoryName = category ? category.name : 'Unknown';
+                        details = `${categoryName} #${measurement.value} at (${Math.round(measurement.x)}, ${Math.round(measurement.y)})`;
+                        icon = '🔢';
+                    } else if (measurement.type === 'linear') {
+                        details = `Length: ${measurement.value} ${measurement.unit} from (${Math.round(measurement.start.x)}, ${Math.round(measurement.start.y)}) to (${Math.round(measurement.end.x)}, ${Math.round(measurement.end.y)})`;
+                        icon = measurement.isCalibration ? '🎯' : '📏';
+                    } else if (measurement.type === 'area') {
+                        details = `Area: ${measurement.value} ${measurement.unit} with ${measurement.points.length} points`;
+                        icon = '🔲';
+                    }
+                    
+                    return `
+                        <div class="measurement-item ${isSelected ? 'selected' : ''}" 
+                             onclick="selectMeasurement(${globalIndex})">
+                            <h4>${icon} ${measurement.isCalibration ? 'Calibration ' : ''}${measurement.type.charAt(0).toUpperCase() + measurement.type.slice(1)} Measurement</h4>
+                            <p>${details}</p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                                <small>Page ${measurement.page}</small>
+                                <div>
+                                    <button onclick="editMeasurement(${globalIndex}); event.stopPropagation();" 
+                                            style="background: #3b82f6; color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; margin-right: 5px;">
+                                        Edit
+                                    </button>
+                                    <button onclick="deleteMeasurement(${globalIndex}); event.stopPropagation();" 
+                                            style="background: #ef4444; color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer;">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            document.getElementById('totalMeasurements').textContent = measurements.length;
+            updateQuickSummary();
+        }
+        
+        function selectMeasurement(index) {
+            const idx = selectedMeasurements.indexOf(index);
+            if (idx === -1) {
+                selectedMeasurements.push(index);
+            } else {
+                selectedMeasurements.splice(idx, 1);
+            }
+            redrawAll();
+            updateMeasurementsList();
+        }
+        
+        function editMeasurement(index) {
+            const measurement = measurements[index];
+            if (measurement.type === 'linear') {
+                const newValue = prompt('Enter new length:', measurement.value);
+                if (newValue && !isNaN(parseFloat(newValue))) {
+                    measurement.value = parseFloat(newValue);
+                    
+                    if (pixelToUnit && !measurement.isCalibration) {
+                        const conversion = unitConversions[selectedUnit];
+                        const meters = parseFloat(newValue) * conversion;
+                        const pixelDistance = meters / pixelToUnit;
+                        
+                        const dx = measurement.end.x - measurement.start.x;
+                        const dy = measurement.end.y - measurement.start.y;
+                        const currentDistance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (currentDistance > 0) {
+                            const scale = pixelDistance / currentDistance;
+                            measurement.end.x = measurement.start.x + dx * scale;
+                            measurement.end.y = measurement.start.y + dy * scale;
+                        }
+                    }
+                    
+                    updateMeasurementsList();
+                    redrawAll();
+                    showNotification('Measurement updated');
+                }
+            } else if (measurement.type === 'count') {
+                const category = countCategories[measurement.categoryId || 'doors'];
+                const newCategory = prompt('Enter new category name (or leave blank to keep current):');
+                if (newCategory) {
+                    const categoryId = newCategory.toLowerCase().replace(/\s+/g, '_');
+                    if (countCategories[categoryId]) {
+                        if (measurement.categoryId && countCategories[measurement.categoryId]) {
+                            const oldCat = countCategories[measurement.categoryId];
+                            oldCat.items = oldCat.items.filter(item => item !== measurement);
+                        }
+                        
+                        measurement.categoryId = categoryId;
+                        measurement.color = countCategories[categoryId].color;
+                        measurement.name = countCategories[categoryId].name;
+                        countCategories[categoryId].items.push(measurement);
+                        
+                        localStorage.setItem('smartquantify_countCategories', JSON.stringify(countCategories));
+                        updateCategorySelector();
+                        redrawAll();
+                        updateMeasurementsList();
+                        updateQuickSummary();
+                        showNotification('Count item category updated');
+                    } else {
+                        alert('Category not found');
+                    }
+                }
+            }
+        }
+        
+        // Enhanced clearAll to properly reset categories
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all measurements?')) {
+                measurements = [];
+                selectedMeasurements = [];
+                tempPoints = [];
+                pixelToUnit = null;
+                
+                // Reset category counters and items
+                Object.keys(countCategories).forEach(key => {
+                    countCategories[key].counter = 1;
+                    countCategories[key].items = [];
+                });
+                
+                updateScaleDisplay();
+                document.getElementById('finishAreaBtn').style.display = 'none';
+                redrawAll();
+                updateMeasurementsList();
+                updateCategorySelector();
+                updateQuickSummary();
+                showNotification('All measurements cleared');
+            }
+        }
+        
+        function saveProject() {
+            if (!currentUser) {
+                alert('Please login to save projects');
+                return;
+            }
+            
+            const projectName = prompt('Enter project name:', `Project_${new Date().toISOString().split('T')[0]}`);
+            if (!projectName) return;
+            
+            const projectData = {
+                id: Date.now(),
+                name: projectName,
+                userId: currentUser.id,
+                createdAt: new Date().toISOString(),
+                pdfFileName: pdfDoc ? 'uploaded.pdf' : null,
+                currentPage: currentPage,
+                baseScale: baseScale,
+                qualityMultiplier: qualityMultiplier,
+                pixelToUnit: pixelToUnit,
+                selectedUnit: selectedUnit,
+                snapEnabled: snapEnabled,
+                snapMode: snapMode,
+                snapTolerance: snapTolerance,
+                measurements: measurements,
+                countCategories: countCategories
+            };
+            
+            const projects = JSON.parse(localStorage.getItem('smartquantify_projects') || '[]');
+            projects.push(projectData);
+            localStorage.setItem('smartquantify_projects', JSON.stringify(projects));
+            
+            showNotification('Project saved successfully');
+        }
+        
+        function loadProject() {
+            if (!currentUser) {
+                alert('Please login to load projects');
+                return;
+            }
+            
+            const projects = JSON.parse(localStorage.getItem('smartquantify_projects') || '[]');
+            const userProjects = projects.filter(p => p.userId === currentUser.id);
+            
+            if (userProjects.length === 0) {
+                alert('No saved projects found');
+                return;
+            }
+            
+            const projectList = document.getElementById('projectList');
+            projectList.innerHTML = userProjects.map(project => `
+                <div style="padding: 10px; border-bottom: 1px solid #e2e8f0; cursor: pointer;" 
+                     onclick="loadProjectData(${project.id})">
+                    <strong>${project.name}</strong>
+                    <div style="font-size: 12px; color: #64748b;">
+                        ${new Date(project.createdAt).toLocaleDateString()} • 
+                        ${project.measurements?.length || 0} measurements
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('loadProjectModal').classList.add('active');
+        }
+        
+        function loadProjectData(projectId) {
+            const projects = JSON.parse(localStorage.getItem('smartquantify_projects') || '[]');
+            const project = projects.find(p => p.id === projectId);
+            
+            if (project) {
+                measurements = project.measurements || [];
+                pixelToUnit = project.pixelToUnit || null;
+                selectedUnit = project.selectedUnit || 'm';
+                snapEnabled = project.snapEnabled !== undefined ? project.snapEnabled : true;
+                snapMode = project.snapMode || 'endpoints';
+                snapTolerance = project.snapTolerance || 10;
+                
+                if (project.qualityMultiplier) {
+                    qualityMultiplier = project.qualityMultiplier;
+                    document.getElementById('qualitySlider').value = qualityMultiplier;
+                    document.getElementById('qualityValue').textContent = qualityMultiplier.toFixed(1) + 'x';
+                }
+                
+                if (project.countCategories) {
+                    countCategories = project.countCategories;
+                }
+                
+                document.getElementById('unitSelector').value = selectedUnit;
+                document.getElementById('snapToggle').checked = snapEnabled;
+                document.getElementById('snapMode').value = snapMode;
+                document.getElementById('snapTolerance').value = snapTolerance;
+                document.getElementById('toleranceValue').textContent = snapTolerance + 'px';
+                document.getElementById('snapStatus').textContent = snapEnabled ? 'ON' : 'OFF';
+                document.getElementById('snapStatus').style.color = snapEnabled ? '#10b981' : '#ef4444';
+                
+                updateScaleDisplay();
+                updateCategorySelector();
+                
+                if (pdfDoc) {
+                    renderPage(currentPage);
+                }
+                
+                redrawAll();
+                updateMeasurementsList();
+                updateQuickSummary();
+                showNotification(`Project "${project.name}" loaded`);
+            }
+            
+            closeModal();
+        }
+        
+        function exportToJSON() {
+            if (measurements.length === 0) {
+                alert('No measurements to export');
+                return;
+            }
+            
+            const exportData = {
+                projectName: currentUser ? `${currentUser.name}'s Project` : 'SmartQuantify Project',
+                exportDate: new Date().toISOString(),
+                user: currentUser ? currentUser.name : 'Anonymous',
+                scale: pixelToUnit ? `1px = ${(pixelToUnit / unitConversions[selectedUnit]).toFixed(6)} ${selectedUnit}` : 'Not calibrated',
+                units: selectedUnit,
+                quality: `${qualityMultiplier}x`,
+                categories: countCategories,
+                measurements: measurements,
+                summary: {
+                    total: measurements.length,
+                    byType: measurements.reduce((acc, m) => {
+                        acc[m.type] = (acc[m.type] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    byCategory: Object.keys(countCategories).reduce((acc, key) => {
+                        acc[key] = {
+                            name: countCategories[key].name,
+                            count: countCategories[key].items?.length || 0
+                        };
+                        return acc;
+                    }, {})
+                }
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `smartquantify_export_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Exported to JSON successfully');
+        }
+        
+        function exportToCSV() {
+            if (measurements.length === 0) {
+                alert('No measurements to export');
+                return;
+            }
+            
+            let csv = 'Type,Page,Value,Unit,Category,Start X,Start Y,End X,End Y,Details\n';
+            
+            measurements.forEach(m => {
+                let details = '';
+                let startX = '', startY = '', endX = '', endY = '';
+                let category = '';
+                
+                if (m.type === 'count') {
+                    const cat = countCategories[m.categoryId || 'doors'];
+                    category = cat ? cat.name : 'Unknown';
+                    details = `${category} #${m.value}`;
+                    startX = m.x;
+                    startY = m.y;
+                } else if (m.type === 'linear') {
+                    details = `Linear measurement`;
+                    startX = m.start.x;
+                    startY = m.start.y;
+                    endX = m.end.x;
+                    endY = m.end.y;
+                    if (m.isCalibration) details += ' [CALIBRATION]';
+                } else if (m.type === 'area') {
+                    details = `Area with ${m.points.length} points`;
+                    startX = m.points[0]?.x || '';
+                    startY = m.points[0]?.y || '';
+                }
+                
+                csv += `${m.type},${m.page},${m.value},${m.unit},${category},${startX},${startY},${endX},${endY},"${details}"\n`;
+            });
+            
+            const dataBlob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `smartquantify_export_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Exported to CSV successfully');
+        }
+        
+        async function prevPage() {
+            if (!pdfDoc || currentPage <= 1) return;
+            currentPage--;
+            await renderPage(currentPage);
+            updateMeasurementsList();
+        }
+        
+        async function nextPage() {
+            if (!pdfDoc || currentPage >= pdfDoc.numPages) return;
+            currentPage++;
+            await renderPage(currentPage);
+            updateMeasurementsList();
+        }
+        
+        // ==================== UTILITY FUNCTIONS ====================
+        
+        function polygonArea(points) {
+            let area = 0;
+            const n = points.length;
+            for (let i = 0; i < n; i++) {
+                const j = (i + 1) % n;
+                area += points[i].x * points[j].y;
+                area -= points[j].x * points[i].y;
+            }
+            return Math.abs(area) / 2;
+        }
+        
+        function polygonCentroid(points) {
+            let x = 0, y = 0;
+            for (const point of points) {
+                x += point.x;
+                y += point.y;
+            }
+            return { x: x / points.length, y: y / points.length };
+        }
+        
+        function hexToRGBA(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        
+        function getContrastColor(hex) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            return brightness > 128 ? '#000000' : '#ffffff';
+        }
+        
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #10b981;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                z-index: 1000;
+                font-weight: 500;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+            
+            if (!document.getElementById('notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // Initialize everything when page loads
+        window.addEventListener('load', () => {
+            initAuth();
+        });
+    </script>
+</body>
+</html>
