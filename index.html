@@ -2860,6 +2860,22 @@
         // ==================== PDF VIEWER & MEASUREMENT TOOLS ====================
         
         function initPDFViewer() {
+            // ==================== CTRL + MOUSE WHEEL ZOOM ====================
+const pdfViewer = document.getElementById('pdfViewer');
+
+pdfViewer.addEventListener('wheel', function(e) {
+    // Only activate when CTRL key is pressed
+    if (e.ctrlKey) {
+        e.preventDefault(); // prevent browser zoom
+
+        if (e.deltaY < 0) {
+            zoomIn();   // scroll up → zoom in
+        } else {
+            zoomOut();  // scroll down → zoom out
+        }
+    }
+}, { passive: false });
+
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
             
             const pdfInput = document.getElementById('pdfInput');
